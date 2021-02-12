@@ -1,12 +1,12 @@
 #!/usr/bin/env python3
 import argparse
 import math
-import numpy as np
 
 
 class PuzzleState():
-    def __init__(self, init_state, parent=None, direction=''):
+    def __init__(self, init_state, parent=None, direction='', zero=None):
         self.state = init_state
+        self.strs = "".join(map(str, self.state))
         self.parent = parent
         self.direction = direction
         if parent:
@@ -15,7 +15,11 @@ class PuzzleState():
         else:
             self.depth = 0
             self.side = int(math.sqrt(len(init_state)))
-        self.neighb = self.neighbours()
+        if zero:
+            self.zero = zero
+        else:
+            self.zero = self.state.index(0)
+        # self.neighb = self.neighbours()
 
     def __repr__(self):
         return "\n".join(
@@ -23,47 +27,57 @@ class PuzzleState():
              for i in range(self.side)]
                         ) + "\n"
 
-    def neighbours(self):
-        res = []
-        if self.state.index(0) >= self.side and self.direction != "D":
-            res.append("U")
-        if self.state.index(0) < self.side**2 - self.side and self.direction != "U":
-            res.append("D")
-        if self.state.index(0) % self.side != 0 and self.direction != "R":
-            res.append("L")
-        if self.state.index(0) % self.side != 2 and self.direction != "L":
-            res.append("R")
-        return res
+    def neighbours(self,):
+        if self.zero >= self.side and self.direction != "D":
+            yield "U"
+        if self.zero < len(self.state) - self.side and self.direction != "U":
+            yield "D"
+        if self.zero % self.side != 0 and self.direction != "R":
+            yield "L"
+        if self.zero % self.side != 2 and self.direction != "L":
+            yield "R"
+
+    def neighbours_rev(self):
+        if self.zero % self.side != 2 and self.direction != "L":
+            yield "R"
+        if self.zero % self.side != 0 and self.direction != "R":
+            yield "L"
+        if self.zero < len(self.state) - self.side and self.direction != "U":
+            yield "D"
+        if self.zero >= self.side and self.direction != "D":
+            yield "U"
 
     def make_move(self, direction):
-        new_state = self.state.copy()
-        z_ind = new_state.index(0)
+        new_state = list(self.state)
         if direction == "U":
-            new_state[z_ind], new_state[z_ind-self.side] =\
-                new_state[z_ind-self.side], new_state[z_ind]
+            new_state[self.zero], new_state[self.zero-self.side] =\
+                new_state[self.zero-self.side], new_state[self.zero]
+            return PuzzleState(new_state, parent=self, direction=direction,
+                               zero=self.zero-self.side)
         elif direction == "D":
-            new_state[z_ind], new_state[z_ind+self.side] =\
-                new_state[z_ind+self.side], new_state[z_ind]
+            new_state[self.zero], new_state[self.zero+self.side] =\
+                new_state[self.zero+self.side], new_state[self.zero]
+            return PuzzleState(new_state, parent=self, direction=direction,
+                               zero=self.zero+self.side)
         elif direction == "L":
-            new_state[z_ind], new_state[z_ind-1] =\
-                new_state[z_ind-1], new_state[z_ind]
+            new_state[self.zero], new_state[self.zero-1] =\
+                new_state[self.zero-1], new_state[self.zero]
+            return PuzzleState(new_state, parent=self, direction=direction,
+                               zero=self.zero-1)
         elif direction == "R":
-            new_state[z_ind], new_state[z_ind+1] =\
-                new_state[z_ind+1], new_state[z_ind]
-        if new_state != self.state:
-            return PuzzleState(new_state, parent=self, direction=direction)
-        else:
-            return None
+            new_state[self.zero], new_state[self.zero+1] =\
+                new_state[self.zero+1], new_state[self.zero]
+            return PuzzleState(new_state, parent=self, direction=direction,
+                               zero=self.zero+1)
 
     def is_goal(self):
-        return self.state == sorted(self.state)
+        return self.state == GOAL
 
 
 def bfs(initial_state, verbose=False):
     queue = [initial_state]
-    visited = []
+    visited = {''}
     nodes = 0
-    current_state = None
     max_depth = 0
     while queue:
         current_state = queue.pop(0)
@@ -77,16 +91,11 @@ def bfs(initial_state, verbose=False):
             return current_state
         nodes += 1
 
-        if verbose:
-            print(current_state, current_state.neighb)
-        for d in current_state.neighb:
+        for d in current_state.neighbours():
             new_s = current_state.make_move(d)
-            if verbose:
-                print("--->", d, "--->")
-                print(new_s)
-            if new_s and new_s.state not in visited:
+            if new_s.strs not in visited:
                 queue.append(new_s)
-                visited.append(new_s.state)
+                visited.add(new_s.strs)
 
         if nodes > 10000:
             print(f"{nodes} nodes")
@@ -97,7 +106,7 @@ def bfs(initial_state, verbose=False):
 
 def dfs(initial_state, verbose=False):
     queue = [initial_state]
-    visited = []
+    visited = {''}
     nodes = 0
     max_depth = 0
     while queue:
@@ -111,23 +120,14 @@ def dfs(initial_state, verbose=False):
             print(f"{max_depth} max depth")
             return current_state
         nodes += 1
-        # else:
-            # visited.append(current_state.state)
 
-        if verbose:
-            print(current_state, current_state.neighb[::-1])
-        for d in current_state.neighb[::-1]:
+        for d in current_state.neighbours_rev():
             new_s = current_state.make_move(d)
-            if new_s and new_s.state not in visited:
-                if verbose:
-                    print("--->", d, "--->")
-                    print(new_s)
+            if new_s.strs not in visited:
                 queue.append(new_s)
-                visited.append(new_s.state)
+                visited.add(new_s.strs)
 
-        # if nodes % 10000 == 0:
-        #     print(nodes)
-        if nodes > 100000:
+        if nodes > 200000:
             print(f"{nodes} nodes")
             print(f"{current_state.depth} depth")
             print(f"{max_depth} max depth")
@@ -166,6 +166,7 @@ if __name__ == '__main__':
     if (math.sqrt(len(init_state)) != round(math.sqrt(len(init_state)))):
         raise ValueError("Wrong initial state! Check the side size")
     initial = PuzzleState(list(init_state))
+    GOAL = sorted(init_state)
     if args.method == "bfs":
         final_state = bfs(initial, args.debug)
     elif args.method == "dfs":
