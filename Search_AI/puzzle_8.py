@@ -9,7 +9,6 @@ class PuzzleState():
         self.strs = "".join(map(str, self.state))
         self.parent = parent
         self.direction = direction
-        self.dist = self.manhatten_distance_to_goal()
         if parent:
             self.side = parent.side
             self.depth = parent.depth + 1
@@ -20,6 +19,7 @@ class PuzzleState():
             self.zero = zero
         else:
             self.zero = self.state.index(0)
+        self.dist = self.manhatten_distance_to_goal() + self.depth
 
     def __repr__(self):
         return "\n".join(
@@ -28,11 +28,7 @@ class PuzzleState():
                         ) + "\n"
 
     def __lt__(self, other):
-        # return (self.dist, "UDLR".find(self.direction)) <\
-            #    (other.dist, "UDLR".find(other.direction))
-        return (self.dist, self.depth, "UDLR".find(self.direction)) <\
-               (other.dist, other.depth, "UDLR".find(other.direction))
-        # return self.dist < other.dist
+        return self.dist < other.dist
 
     def manhatten_distance_to_goal(self):
         dist = 0.0
@@ -174,21 +170,19 @@ class Solver():
                 break
 
     def ast(self, verbose=False, maxnodes=200000):
-        queue = [self.initial_state]
+        queue = {self.initial_state.strs: self.initial_state}
         visited = {''}
         nodes = 0
         max_depth = 0
         while queue:
-            queue = sorted(queue, reverse=True)
-            current_state = queue.pop()
+            queue = dict(
+                sorted(queue.items(), key=lambda item: item[1]))
+            current_state = queue[next(iter(queue))]
+            del queue[current_state.strs]
             if verbose:
                 print("Winner ", current_state.direction)
                 print(current_state.dist)
                 print(current_state)
-                for state in queue:
-                    print(state.state)
-                    print(state.dist)
-                # print(len(queue))
             if current_state.depth > max_depth:
                 max_depth = current_state.depth
 
@@ -208,11 +202,12 @@ class Solver():
                     print("---> ", d, " --->")
                     print(new_s.dist)
                     print(new_s)
-                # print("--->  --->")
-                # print(next((x for x in queue if x.strs == new_s.strs), [""]).depth)
                 if new_s.strs not in visited:
-                    queue.append(new_s)
-                # else:
+                    if new_s.strs not in queue:
+                        queue[new_s.strs] = new_s
+                    elif new_s.depth < queue[new_s.strs].depth:
+                        queue[new_s.strs] = new_s
+                        print("ALARM!!!!")
 
             if nodes > maxnodes:
                 print(f"{nodes} nodes")
@@ -246,6 +241,8 @@ if __name__ == '__main__':
                         help="initial state of puzzle in format: 0,1,2,3 etc")
     parser.add_argument("-d", "--debug", action='store_true',
                         help="initial state of puzzle in format: 0,1,2,3 etc")
+    parser.add_argument("-n", "--nodes", default='200000',
+                        help="initial state of puzzle in format: 0,1,2,3 etc")
     args = parser.parse_args()
 
     init_state = list(map(int, args.initial.split(",")))
@@ -254,7 +251,7 @@ if __name__ == '__main__':
     if (math.sqrt(len(init_state)) != round(math.sqrt(len(init_state)))):
         raise ValueError("Wrong initial state! Check the side size")
     solver = Solver(args.method, init_state)
-    final_state = solver.solve(verbose=args.debug, maxnodes=200000)
+    final_state = solver.solve(verbose=args.debug, maxnodes=int(args.nodes))
     if args.final:
         if final_state:
             print_path(final_state)
