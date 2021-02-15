@@ -2,6 +2,11 @@
 import argparse
 import math
 
+import heapq
+import time
+import resource
+from resource import RUSAGE_SELF
+
 
 class PuzzleState():
     def __init__(self, init_state, parent=None, direction='',
@@ -102,11 +107,14 @@ class Solver():
 
     def __init__(self, method, array):
         self._method = method
-        self.goal = "".join(map(str, sorted(list(array))))
+        self.goal_array = sorted(list(array))
+        self.goal = "".join(map(str, self.goal_array))
         self.initial_state = PuzzleState(list(array), ast=(method == "ast"))
         self.true_2d = coords_2d(sorted(array))
         self.statistics = Stats()
         self.final_state = None
+        if not self.check_solvability():
+            raise AttributeError("The initial state is not solvable")
 
     def is_goal(self, state):
         return state.strs == self.goal
@@ -171,12 +179,12 @@ class Solver():
                     queue_strs.add(new_s.strs)
 
     def ast(self, maxnodes=200000):
-        queue = [self.initial_state]
+        queue = []
+        heapq.heappush(queue, self.initial_state)
         queue_strs = {self.initial_state.strs}
         visited = {''}
         while queue:
-            queue = sorted(queue, reverse=True)
-            current_state = queue.pop()
+            current_state = heapq.heappop(queue)
             queue_strs.remove(current_state.strs)
             if current_state.depth > self.statistics.max_depth:
                 self.statistics.max_depth = current_state.depth
@@ -192,10 +200,11 @@ class Solver():
                 new_s = current_state.make_move(d)
                 if new_s.strs not in visited:
                     if new_s.strs not in queue_strs:
-                        queue.append(new_s)
+                        heapq.heappush(queue, new_s)
                         queue_strs.add(new_s.strs)
                     else:
-                        elem, num = [(el, i) for i, el in enumerate(queue) if el.strs == new_s.strs][0]
+                        elem, num = [(el, i) for i, el in enumerate(queue)
+                                     if el.strs == new_s.strs][0]
                         if new_s.depth < elem.depth:
                             queue[num] = new_s
 
@@ -210,13 +219,20 @@ class Solver():
         self.statistics.path = self.statistics.path[::-1]
         self.statistics.moves = moves[-2::-1]
 
-    def print_stats(self, print_path):
+    def print_stats(self, print_path, total_time):
         if print_path:
             print("path_to_goal: ", self.statistics.moves)
         print("cost_of_path: ", len(self.statistics.moves))
         print("nodes_expanded: ", self.statistics.nodes)
-        print("search_depth: ", self.final_state.depth)
+        if self.final_state:
+            print("search_depth: ", self.final_state.depth)
         print("max_depth: ", self.statistics.max_depth)
+        print("running_time: ", total_time)
+        print("max_ram_usage: {} MB"
+              .format(resource.getrusage(RUSAGE_SELF)[2]/1000))
+
+    def check_solvability(self):
+        return parity(self.initial_state.state) == parity(self.goal_array)
 
 
 class Stats():
@@ -227,8 +243,22 @@ class Stats():
         self.moves = []
 
 
+def parity(nums):
+    nums = [num for num in nums if num != 0]
+    sor = nums.copy()
+    sor.sort()
+    par = 1
+    while nums != sor:
+        for i in range(len(nums)-1):
+            if nums[i] > nums[i+1]:
+                nums[i], nums[i+1] = nums[i+1], nums[i]
+                par *= -1
+    return par
+
+
 if __name__ == '__main__':
 
+    start = time.time()
     parser = argparse.ArgumentParser()
     parser.add_argument("method", default="bfs",
                         help="method of search: bfs, dfs or ast")
@@ -245,10 +275,10 @@ if __name__ == '__main__':
     if (list(range(len(init_state))) != sorted(init_state)):
         raise ValueError("Wrong initial state! Check if all numbers are here")
     if (math.sqrt(len(init_state)) != round(math.sqrt(len(init_state)))):
-        raise ValueError("Wrong initial state! Check the side size")
+        raise ValueError("Wrong initial state! Check the array size")
     solver = Solver(args.method, init_state)
     final_state = solver.solve(maxnodes=int(args.nodes))
-    if final_state:
-        solver.print_stats(args.final)
-    else:
+    if not final_state:
         print("Solution is not found")
+    total_time = time.time() - start
+    solver.print_stats(args.final, total_time)
