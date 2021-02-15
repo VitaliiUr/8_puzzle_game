@@ -343,7 +343,10 @@ class Solver():
               .format(resource.getrusage(RUSAGE_SELF)[2]/1000))
 
     def check_solvability(self):
-        return parity(self.initial_state.state) == parity(self.goal_array)
+        # return True
+        # print(parity(self.initial_state.state))
+        return parity(self.initial_state.state) ==\
+               parity(self.goal_array) * (-1)**(self.initial_state.side + 1)
 
 
 @dataclass
@@ -368,7 +371,9 @@ def coords_2d(arr):
 
 
 def parity(nums):
-    nums = [num for num in nums if num != 0]
+    # nums = [num for num in nums if num != 0]
+    # nums = [num for num in nums if num != 0]
+    nums = nums.copy()
     sor = nums.copy()
     sor.sort()
     par = 1
