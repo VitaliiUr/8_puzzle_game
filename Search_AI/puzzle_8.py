@@ -38,6 +38,7 @@ class PuzzleState():
                         ) + "\n"
 
     def __lt__(self, other):
+        # return (self.dist, "UDLR".find(self.direction)) < (other.dist, "UDLR".find(other.direction))
         return self.dist < other.dist
 
     def manhatten_distance_to_goal(self, coords_goal):
@@ -110,72 +111,24 @@ class Solver():
     def is_goal(self, state):
         return state.strs == self.goal
 
-    def solve(self, verbose=False, maxnodes=500000):
+    def solve(self, maxnodes=500000):
         if self._method == "bfs":
-            self.final_state = self.bfs(verbose=verbose,
-                                        maxnodes=maxnodes)
+            self.final_state = self.bfs(maxnodes=maxnodes)
         elif self._method == "dfs":
-            self.final_state = self.dfs(verbose=verbose,
-                                        maxnodes=maxnodes)
+            self.final_state = self.dfs(maxnodes=maxnodes)
         elif self._method == "ast":
-            self.final_state = self.ast(verbose=verbose,
-                                        maxnodes=maxnodes)
+            self.final_state = self.ast(maxnodes=maxnodes)
         if self.final_state:
             self.get_path()
         return self.final_state
 
-    def bfs(self, verbose=False, maxnodes=200000):
+    def bfs(self, maxnodes=200000):
         queue = [self.initial_state]
+        queue_strs = {self.initial_state.strs}
         visited = {''}
         while queue:
             current_state = queue.pop(0)
-            if current_state.depth > self.statistics.max_depth:
-                self.statistics.max_depth = current_state.depth
-
-            if self.is_goal(current_state):
-                return current_state
-            self.statistics.nodes += 1
-            if self.statistics.nodes > maxnodes:
-                break
-
-            for d in current_state.neighbours():
-                new_s = current_state.make_move(d)
-                if new_s.strs not in visited:
-                    queue.append(new_s)
-                    visited.add(new_s.strs)
-
-    def dfs(self, verbose=False, maxnodes=200000):
-        queue = [self.initial_state]
-        visited = {''}
-        while queue:
-            current_state = queue.pop()
-            if current_state.depth > self.statistics.max_depth:
-                self.statistics.max_depth = current_state.depth
-
-            if self.is_goal(current_state):
-                return current_state
-            self.statistics.nodes += 1
-            if self.statistics.nodes > maxnodes:
-                break
-
-            for d in current_state.neighbours_rev():
-                new_s = current_state.make_move(d)
-                if new_s.strs not in visited:
-                    queue.append(new_s)
-                    visited.add(new_s.strs)
-
-    def ast(self, verbose=False, maxnodes=200000):
-        queue = {self.initial_state.strs: self.initial_state}
-        visited = {''}
-        while queue:
-            queue = dict(
-                sorted(queue.items(), key=lambda item: item[1]))
-            current_state = queue[next(iter(queue))]
-            del queue[current_state.strs]
-            if verbose:
-                print("Winner ", current_state.direction)
-                print(current_state.dist)
-                print(current_state)
+            queue_strs.remove(current_state.strs)
             if current_state.depth > self.statistics.max_depth:
                 self.statistics.max_depth = current_state.depth
 
@@ -186,19 +139,65 @@ class Solver():
                 break
             visited.add(current_state.strs)
 
-            if verbose:
-                print("neightbours")
             for d in current_state.neighbours():
                 new_s = current_state.make_move(d)
-                if verbose:
-                    print("---> ", d, " --->")
-                    print(new_s.dist)
-                    print(new_s)
+                if (new_s.strs not in visited) and\
+                        (new_s.strs not in queue_strs):
+                    queue.append(new_s)
+                    queue_strs.add(new_s.strs)
+
+    def dfs(self, maxnodes=200000):
+        queue = [self.initial_state]
+        queue_strs = {self.initial_state.strs}
+        visited = {''}
+        while queue:
+            current_state = queue.pop()
+            queue_strs.remove(current_state.strs)
+            if current_state.depth > self.statistics.max_depth:
+                self.statistics.max_depth = current_state.depth
+
+            if self.is_goal(current_state):
+                return current_state
+            self.statistics.nodes += 1
+            if self.statistics.nodes > maxnodes:
+                break
+            visited.add(current_state.strs)
+
+            for d in current_state.neighbours_rev():
+                new_s = current_state.make_move(d)
+                if (new_s.strs not in visited) and\
+                        (new_s.strs not in queue_strs):
+                    queue.append(new_s)
+                    queue_strs.add(new_s.strs)
+
+    def ast(self, maxnodes=200000):
+        queue = [self.initial_state]
+        queue_strs = {self.initial_state.strs}
+        visited = {''}
+        while queue:
+            queue = sorted(queue, reverse=True)
+            current_state = queue.pop()
+            queue_strs.remove(current_state.strs)
+            if current_state.depth > self.statistics.max_depth:
+                self.statistics.max_depth = current_state.depth
+
+            if self.is_goal(current_state):
+                return current_state
+            self.statistics.nodes += 1
+            if self.statistics.nodes > maxnodes:
+                break
+            visited.add(current_state.strs)
+
+            for d in current_state.neighbours():
+                new_s = current_state.make_move(d)
                 if new_s.strs not in visited:
-                    if new_s.strs not in queue:
-                        queue[new_s.strs] = new_s
-                    elif new_s.depth < queue[new_s.strs].depth:
-                        queue[new_s.strs] = new_s
+                    if new_s.strs not in queue_strs:
+                        queue.append(new_s)
+                        queue_strs.add(new_s.strs)
+                    else:
+                        elem, num = [(el, i) for i, el in enumerate(queue) if el.strs == new_s.strs][0]
+                        if new_s.depth < elem.depth:
+                            queue[num] = new_s
 
     def get_path(self):
         self.statistics.path = [self.final_state]
@@ -211,8 +210,9 @@ class Solver():
         self.statistics.path = self.statistics.path[::-1]
         self.statistics.moves = moves[-2::-1]
 
-    def print_stats(self):
-        print("path_to_goal: ", self.statistics.moves)
+    def print_stats(self, print_path):
+        if print_path:
+            print("path_to_goal: ", self.statistics.moves)
         print("cost_of_path: ", len(self.statistics.moves))
         print("nodes_expanded: ", self.statistics.nodes)
         print("search_depth: ", self.final_state.depth)
@@ -237,8 +237,6 @@ if __name__ == '__main__':
                         default 0,1,2,3,4,5,6,7,8")
     parser.add_argument("-f", "--final", action='store_true',
                         help="print the path")
-    parser.add_argument("-d", "--debug", action='store_true',
-                        help="print debug statements")
     parser.add_argument("-n", "--nodes", default='200000',
                         help="maximum number of nodes to visit, default 200000")
     args = parser.parse_args()
@@ -249,9 +247,8 @@ if __name__ == '__main__':
     if (math.sqrt(len(init_state)) != round(math.sqrt(len(init_state)))):
         raise ValueError("Wrong initial state! Check the side size")
     solver = Solver(args.method, init_state)
-    final_state = solver.solve(verbose=args.debug, maxnodes=int(args.nodes))
-    if args.final:
-        if final_state:
-            solver.print_stats()
-        else:
-            print("Solution is not found")
+    final_state = solver.solve(maxnodes=int(args.nodes))
+    if final_state:
+        solver.print_stats(args.final)
+    else:
+        print("Solution is not found")
