@@ -17,11 +17,11 @@ for $n=3$. * represent an empty space
 
 For example the game can be:
 
-<pre> 
+<!-- <pre> -->
 3,1,2    3,1,2    3,1,2    *,1,2
 4,7,5 -> 4,*,5 -> *,4,5 -> 3,4,5
 6,*,8    6,7,8    6,7,8    6,7,8
-</pre> 
+<!-- </pre>  -->
 So the final result is a set of movements ("U","D","L","R") which lead from the initial position to the goal.
 
 
