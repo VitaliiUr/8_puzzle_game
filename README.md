@@ -32,6 +32,11 @@ In the demonstrated game this sequense would be ["U", "L", "U"].
 ```
 python3 puzzle_8.py <method> <initial_position> [--f] [--n]
 ```
+or alternatively
+
+```
+./puzzle_8.py <method> <initial_position> [--f] [--n]
+```
 
 Method can be ```dfs```(deep search first), ```bfs```(breadth search first) or ```ast```(A*).
 
