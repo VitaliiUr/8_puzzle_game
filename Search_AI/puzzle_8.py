@@ -4,22 +4,32 @@ import math
 
 
 class PuzzleState():
-    def __init__(self, init_state, parent=None, direction='', zero=None):
+    def __init__(self, init_state, parent=None, direction='',
+                 zero=None, ast=None):
         self.state = init_state
         self.strs = "".join(map(str, self.state))
         self.parent = parent
         self.direction = direction
+        self.ast = ast
         if parent:
             self.side = parent.side
             self.depth = parent.depth + 1
+            self.coords_goal = parent.coords_goal
         else:
             self.depth = 0
             self.side = int(math.sqrt(len(init_state)))
+            self.coords_goal = coords_2d(range(len(self.state)))
         if zero:
             self.zero = zero
         else:
             self.zero = self.state.index(0)
-        self.dist = self.manhatten_distance_to_goal() + self.depth
+        if ast:
+            if parent:
+                self.coords_goal = parent.coords_goal
+            else:
+                self.coords_goal = coords_2d(range(len(self.state)))
+            self.dist = self.manhatten_distance_to_goal(self.coords_goal) +\
+                        self.depth
 
     def __repr__(self):
         return "\n".join(
@@ -30,13 +40,12 @@ class PuzzleState():
     def __lt__(self, other):
         return self.dist < other.dist
 
-    def manhatten_distance_to_goal(self):
+    def manhatten_distance_to_goal(self, coords_goal):
         dist = 0.0
         coords = coords_2d(self.state)
-        coords_g = coords_2d(range(len(self.state)))
         for key in range(1, len(self.state)):
-            dist += abs(coords_g[key][0] - coords[key][0]) +\
-                abs(coords_g[key][1] - coords[key][1])
+            dist += abs(coords_goal[key][0] - coords[key][0]) +\
+                abs(coords_goal[key][1] - coords[key][1])
         return dist
 
     def neighbours(self,):
@@ -65,22 +74,22 @@ class PuzzleState():
             new_state[self.zero], new_state[self.zero-self.side] =\
                 new_state[self.zero-self.side], new_state[self.zero]
             return PuzzleState(new_state, parent=self, direction=direction,
-                               zero=self.zero-self.side)
+                               zero=self.zero-self.side, ast=self.ast)
         elif direction == "D":
             new_state[self.zero], new_state[self.zero+self.side] =\
                 new_state[self.zero+self.side], new_state[self.zero]
             return PuzzleState(new_state, parent=self, direction=direction,
-                               zero=self.zero+self.side)
+                               zero=self.zero+self.side, ast=self.ast)
         elif direction == "L":
             new_state[self.zero], new_state[self.zero-1] =\
                 new_state[self.zero-1], new_state[self.zero]
             return PuzzleState(new_state, parent=self, direction=direction,
-                               zero=self.zero-1)
+                               zero=self.zero-1, ast=self.ast)
         elif direction == "R":
             new_state[self.zero], new_state[self.zero+1] =\
                 new_state[self.zero+1], new_state[self.zero]
             return PuzzleState(new_state, parent=self, direction=direction,
-                               zero=self.zero+1)
+                               zero=self.zero+1, ast=self.ast)
 
 
 def coords_2d(arr):
@@ -93,40 +102,41 @@ class Solver():
     def __init__(self, method, array):
         self._method = method
         self.goal = "".join(map(str, sorted(list(array))))
-        self.initial_state = PuzzleState(list(array))
+        self.initial_state = PuzzleState(list(array), ast=(method == "ast"))
         self.true_2d = coords_2d(sorted(array))
+        self.statistics = Stats()
+        self.final_state = None
 
     def is_goal(self, state):
         return state.strs == self.goal
 
     def solve(self, verbose=False, maxnodes=500000):
         if self._method == "bfs":
-            final_state = self.bfs(verbose=verbose,
-                                   maxnodes=maxnodes)
+            self.final_state = self.bfs(verbose=verbose,
+                                        maxnodes=maxnodes)
         elif self._method == "dfs":
-            final_state = self.dfs(verbose=verbose,
-                                   maxnodes=maxnodes)
+            self.final_state = self.dfs(verbose=verbose,
+                                        maxnodes=maxnodes)
         elif self._method == "ast":
-            final_state = self.ast(verbose=verbose,
-                                   maxnodes=maxnodes)
-        return final_state
+            self.final_state = self.ast(verbose=verbose,
+                                        maxnodes=maxnodes)
+        if self.final_state:
+            self.get_path()
+        return self.final_state
 
     def bfs(self, verbose=False, maxnodes=200000):
         queue = [self.initial_state]
         visited = {''}
-        nodes = 0
-        max_depth = 0
         while queue:
             current_state = queue.pop(0)
-            if current_state.depth > max_depth:
-                max_depth = current_state.depth
+            if current_state.depth > self.statistics.max_depth:
+                self.statistics.max_depth = current_state.depth
 
             if self.is_goal(current_state):
-                print(f"{nodes} nodes")
-                print(f"{current_state.depth} depth")
-                print(f"{max_depth} max depth")
                 return current_state
-            nodes += 1
+            self.statistics.nodes += 1
+            if self.statistics.nodes > maxnodes:
+                break
 
             for d in current_state.neighbours():
                 new_s = current_state.make_move(d)
@@ -134,28 +144,19 @@ class Solver():
                     queue.append(new_s)
                     visited.add(new_s.strs)
 
-            if nodes > maxnodes:
-                print(f"{nodes} nodes")
-                print(f"{current_state.depth} depth")
-                print(f"{max_depth} max depth")
-                break
-
     def dfs(self, verbose=False, maxnodes=200000):
         queue = [self.initial_state]
         visited = {''}
-        nodes = 0
-        max_depth = 0
         while queue:
             current_state = queue.pop()
-            if current_state.depth > max_depth:
-                max_depth = current_state.depth
+            if current_state.depth > self.statistics.max_depth:
+                self.statistics.max_depth = current_state.depth
 
             if self.is_goal(current_state):
-                print(f"{nodes} nodes")
-                print(f"{current_state.depth} depth")
-                print(f"{max_depth} max depth")
                 return current_state
-            nodes += 1
+            self.statistics.nodes += 1
+            if self.statistics.nodes > maxnodes:
+                break
 
             for d in current_state.neighbours_rev():
                 new_s = current_state.make_move(d)
@@ -163,17 +164,9 @@ class Solver():
                     queue.append(new_s)
                     visited.add(new_s.strs)
 
-            if nodes > maxnodes:
-                print(f"{nodes} nodes")
-                print(f"{current_state.depth} depth")
-                print(f"{max_depth} max depth")
-                break
-
     def ast(self, verbose=False, maxnodes=200000):
         queue = {self.initial_state.strs: self.initial_state}
         visited = {''}
-        nodes = 0
-        max_depth = 0
         while queue:
             queue = dict(
                 sorted(queue.items(), key=lambda item: item[1]))
@@ -183,15 +176,14 @@ class Solver():
                 print("Winner ", current_state.direction)
                 print(current_state.dist)
                 print(current_state)
-            if current_state.depth > max_depth:
-                max_depth = current_state.depth
+            if current_state.depth > self.statistics.max_depth:
+                self.statistics.max_depth = current_state.depth
 
             if self.is_goal(current_state):
-                print(f"{nodes} nodes")
-                print(f"{current_state.depth} depth")
-                print(f"{max_depth} max depth")
                 return current_state
-            nodes += 1
+            self.statistics.nodes += 1
+            if self.statistics.nodes > maxnodes:
+                break
             visited.add(current_state.strs)
 
             if verbose:
@@ -207,27 +199,32 @@ class Solver():
                         queue[new_s.strs] = new_s
                     elif new_s.depth < queue[new_s.strs].depth:
                         queue[new_s.strs] = new_s
-                        print("ALARM!!!!")
 
-            if nodes > maxnodes:
-                print(f"{nodes} nodes")
-                print(f"{current_state.depth} depth")
-                print(f"{max_depth} max depth")
-                break
+    def get_path(self):
+        self.statistics.path = [self.final_state]
+        moves = [self.final_state.direction]
+        par = self.final_state.parent
+        while par:
+            self.statistics.path.append(par)
+            moves.append(par.direction)
+            par = par.parent
+        self.statistics.path = self.statistics.path[::-1]
+        self.statistics.moves = moves[-2::-1]
+
+    def print_stats(self):
+        print("path_to_goal: ", self.statistics.moves)
+        print("cost_of_path: ", len(self.statistics.moves))
+        print("nodes_expanded: ", self.statistics.nodes)
+        print("search_depth: ", self.final_state.depth)
+        print("max_depth: ", self.statistics.max_depth)
 
 
-def print_path(state):
-    path = [state]
-    moves = [state.direction]
-    par = state.parent
-    while par:
-        path.append(par)
-        moves.append(par.direction)
-        par = par.parent
-    # for el in path[::-1]:
-    #     print(el)
-    print(moves[-2::-1])
-    print("Cost of path: ", len(moves[-2::-1]))
+class Stats():
+    def __init__(self):
+        self.nodes = 0
+        self.max_depth = 0
+        self.path = []
+        self.moves = []
 
 
 if __name__ == '__main__':
@@ -236,13 +233,14 @@ if __name__ == '__main__':
     parser.add_argument("method", default="bfs",
                         help="method of search: bfs, dfs or ast")
     parser.add_argument("initial", default="0,1,2,3,4,5,6,7,8",
-                        help="initial state of puzzle in format: 0,1,2,3 etc")
+                        help="initial state of puzzle in format: 0,1,2,3 etc,\
+                        default 0,1,2,3,4,5,6,7,8")
     parser.add_argument("-f", "--final", action='store_true',
-                        help="initial state of puzzle in format: 0,1,2,3 etc")
+                        help="print the path")
     parser.add_argument("-d", "--debug", action='store_true',
-                        help="initial state of puzzle in format: 0,1,2,3 etc")
+                        help="print debug statements")
     parser.add_argument("-n", "--nodes", default='200000',
-                        help="initial state of puzzle in format: 0,1,2,3 etc")
+                        help="maximum number of nodes to visit, default 200000")
     args = parser.parse_args()
 
     init_state = list(map(int, args.initial.split(",")))
@@ -254,6 +252,6 @@ if __name__ == '__main__':
     final_state = solver.solve(verbose=args.debug, maxnodes=int(args.nodes))
     if args.final:
         if final_state:
-            print_path(final_state)
+            solver.print_stats()
         else:
             print("Solution is not found")
