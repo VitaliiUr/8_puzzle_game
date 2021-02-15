@@ -2,6 +2,8 @@
 import argparse
 import math
 
+from dataclasses import dataclass, field
+from typing import List
 import heapq
 import time
 import resource
@@ -9,9 +11,46 @@ from resource import RUSAGE_SELF
 
 
 class PuzzleState():
-    def __init__(self, init_state, parent=None, direction='',
-                 zero=None, ast=None):
-        self.state = init_state
+    """ complete information about particular tiles configuration
+
+    Arguments
+    ----------
+    tiles_config : list[int]
+        initial position of tiles
+    parent : PuzzleState, optional
+        PuzzleState which led to the current, by default None
+    direction : str, optional
+        direction of the move which led from the parent to current state,
+        by default ''
+    zero : int, optional
+        index of the empty tile, by default None
+    ast : bool, optional
+        True if A* method is used
+        (additional attributes should be initialized), by default False
+
+    Attributes
+    ----------
+        state : list[int]
+            tiles configuration
+        strs : str
+            tiles configuration as string
+        parent: PuzzleState, optional
+            PuzzleState which led to the current, by default None
+        direction : str, optional
+            direction of the move which led from the parent to current state
+        ast : bool, optional
+            True if A* method is used
+            (additional attributes should be initialized), by default False
+        side : int
+            size of 2d space of tiles
+        depth : int
+            depth of the current element in the search tree
+        coords_goal: 
+
+    """
+    def __init__(self, tiles_config, parent=None, direction='',
+                 zero=None, ast=False):
+        self.state = tiles_config
         self.strs = "".join(map(str, self.state))
         self.parent = parent
         self.direction = direction
@@ -37,12 +76,20 @@ class PuzzleState():
                         self.depth
 
     def __repr__(self):
+        """ for pretty printing
+
+        Returns
+        -------
+        str
+            configuration with line breaks to print a tiles in 2d format
+        """
         return "\n".join(
             [" ".join(map(str, self.state[i*self.side:(i+1)*self.side]))
              for i in range(self.side)]
                         ) + "\n"
 
     def __lt__(self, other):
+        """comparison between two PuzzleState instances"""
         # return (self.dist, "UDLR".find(self.direction)) < (other.dist, "UDLR".find(other.direction))
         return self.dist < other.dist
 
@@ -54,7 +101,14 @@ class PuzzleState():
                 abs(coords_goal[key][1] - coords[key][1])
         return dist
 
-    def neighbours(self,):
+    def neighbours(self):
+        """generator of possible movement directions in order \"UDLR\"
+
+        Yields
+        -------
+        str
+            direction where it is possible to move zero element
+        """
         if self.zero >= self.side and self.direction != "D":
             yield "U"
         if self.zero < len(self.state) - self.side and self.direction != "U":
@@ -65,6 +119,7 @@ class PuzzleState():
             yield "R"
 
     def neighbours_rev(self):
+        """the same as neightbours(), but in reversed order"""
         if self.zero % self.side != 2 and self.direction != "L":
             yield "R"
         if self.zero % self.side != 0 and self.direction != "R":
@@ -75,6 +130,17 @@ class PuzzleState():
             yield "U"
 
     def make_move(self, direction):
+        """change a configuration with moving a zero element in the desired direction
+
+        Parameters
+        ----------
+        direction : str, {"U", "D", "L", "R"}
+
+        Returns
+        -------
+        PuzzleState
+            an instance of PuzzleState obtained after moving performed
+        """
         new_state = list(self.state)
         if direction == "U":
             new_state[self.zero], new_state[self.zero-self.side] =\
@@ -97,20 +163,65 @@ class PuzzleState():
             return PuzzleState(new_state, parent=self, direction=direction,
                                zero=self.zero+1, ast=self.ast)
 
+    def get_goal_config(self):
+        return sorted(list(self.state))
+
 
 def coords_2d(arr):
+    """transform an array to the 2d coordinates
+
+        Returns
+        -------
+        dict
+            keys are an initial array and values - a tuples of x and y coordinates
+    """
     side = int(math.sqrt(len(arr)))
     return {num: (i//side, i % side) for i, num in enumerate(arr)}
 
 
 class Solver():
+    """A class which solves an 8 puzzle game
+
+    Returns
+    -------
+    PuzzleState or None
+        A final state if the search was successfull or None if not
+
+    Args
+    ----------
+    method : str, {"bfs", "dfs", "ast"}
+        a method to solve a game
+    array : list[int]
+        initial position of tiles
+
+    Attributes
+    ----------
+        _method : str
+            method of solving
+        goal_array : list
+            goal tiles configuration
+        goal : str
+            goal tiles configuration in a format of string
+        initial_state : PuzzleState
+            initial state
+        statistics : Stats
+            holds all the neccessary statistics data
+        final_state : PuzzleState
+            final element
+
+    Raises
+    ------
+    AttributeError
+        if the parity of initial state and the goal are not the same, that
+        is a system is not solvable
+    """
+    # TODO make a function to compare all methods
 
     def __init__(self, method, array):
         self._method = method
-        self.goal_array = sorted(list(array))
-        self.goal = "".join(map(str, self.goal_array))
         self.initial_state = PuzzleState(list(array), ast=(method == "ast"))
-        self.true_2d = coords_2d(sorted(array))
+        self.goal_array = self.initial_state.get_goal_config()
+        self.goal = "".join(map(str, self.goal_array))
         self.statistics = Stats()
         self.final_state = None
         if not self.check_solvability():
@@ -209,6 +320,7 @@ class Solver():
                             queue[num] = new_s
 
     def get_path(self):
+        """add the full path of final element to the statistics object"""
         self.statistics.path = [self.final_state]
         moves = [self.final_state.direction]
         par = self.final_state.parent
@@ -219,7 +331,15 @@ class Solver():
         self.statistics.path = self.statistics.path[::-1]
         self.statistics.moves = moves[-2::-1]
 
-    def print_stats(self, print_path, total_time):
+    def print_stats(self, print_path):
+        """print the statistics of the search process and (optionally) final path
+
+        Arguments
+        ---------
+        print_path : bool
+            whether to print a final path
+
+        """
         if print_path:
             print("path_to_goal: ", self.statistics.moves)
         print("cost_of_path: ", len(self.statistics.moves))
@@ -227,7 +347,7 @@ class Solver():
         if self.final_state:
             print("search_depth: ", self.final_state.depth)
         print("max_depth: ", self.statistics.max_depth)
-        print("running_time: ", total_time)
+        print("running_time: ", time.time() - self.statistics.start_time)
         print("max_ram_usage: {} MB"
               .format(resource.getrusage(RUSAGE_SELF)[2]/1000))
 
@@ -235,12 +355,13 @@ class Solver():
         return parity(self.initial_state.state) == parity(self.goal_array)
 
 
+@dataclass
 class Stats():
-    def __init__(self):
-        self.nodes = 0
-        self.max_depth = 0
-        self.path = []
-        self.moves = []
+    nodes: int = 0
+    max_depth: int = 0
+    path: List[PuzzleState] = field(default_factory=list)
+    moves: List[str] = field(default_factory=list)
+    start_time = time.time()
 
 
 def parity(nums):
@@ -258,7 +379,6 @@ def parity(nums):
 
 if __name__ == '__main__':
 
-    start = time.time()
     parser = argparse.ArgumentParser()
     parser.add_argument("method", default="bfs",
                         help="method of search: bfs, dfs or ast")
@@ -268,7 +388,8 @@ if __name__ == '__main__':
     parser.add_argument("-f", "--final", action='store_true',
                         help="print the path")
     parser.add_argument("-n", "--nodes", default='200000',
-                        help="maximum number of nodes to visit, default 200000")
+                        help="maximum number of nodes to visit,\
+                             default 200 000")
     args = parser.parse_args()
 
     init_state = list(map(int, args.initial.split(",")))
@@ -278,7 +399,6 @@ if __name__ == '__main__':
         raise ValueError("Wrong initial state! Check the array size")
     solver = Solver(args.method, init_state)
     final_state = solver.solve(maxnodes=int(args.nodes))
+    solver.print_stats(args.final)
     if not final_state:
         print("Solution is not found")
-    total_time = time.time() - start
-    solver.print_stats(args.final, total_time)

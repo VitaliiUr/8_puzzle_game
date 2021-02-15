@@ -22,7 +22,9 @@ For example the game can be:
 4,7,5 -> 4,*,5 -> *,4,5 -> 3,4,5
 6,*,8    6,7,8    6,7,8    6,7,8
 </pre>
-So the final result is a set of movements ("U","D","L","R") which lead from the initial position to the goal.
+So the final result is a set of movements from the set {"U","D","L","R"} which lead from the initial position to the goal.
+
+In the demonstrated game this sequense would be ["U", "L", "U"].
 
 
 ### Usage
@@ -61,7 +63,7 @@ This condition is checked before the start of searching.
 
 The program outputs:
 
-- path_to_goal:  list of strings from ("U","D","L","R") which show a sequence of moves from initial position to reach a goal(only if ```--f``` flag is specified)
+- path_to_goal:  list of strings from {"U","D","L","R"} which show a sequence of moves from initial position to reach a goal(only if ```--f``` flag is specified)
 - cost_of_path: int, number of moves to reach the goal
 - nodes_expanded: int, number of nodes visited durng the search
 - search_depth: depth of the goal position in the search tree
