@@ -29,3 +29,5 @@ if __name__ == '__main__':
     solver.print_stats(args.final)
     if not final_state:
         print("Solution is not found")
+
+## [15, 14, 1, 6, 9, 11, 4, 12, 0, 10, 7, 3, 13, 8, 5, 2]

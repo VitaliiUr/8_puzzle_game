@@ -51,7 +51,7 @@ class PuzzleState():
 
     """
     def __init__(self, tiles_config, parent=None, direction='',
-                 zero=None, ast=False):
+                 zero=None, ast=False, goal_array=None):
         self.state = tiles_config
         self.strs = "".join(map(str, self.state))
         self.parent = parent
@@ -60,11 +60,9 @@ class PuzzleState():
         if parent:
             self.side = parent.side
             self.depth = parent.depth + 1
-            self.coords_goal = parent.coords_goal
         else:
             self.depth = 0
             self.side = int(math.sqrt(len(tiles_config)))
-            self.coords_goal = coords_2d(range(len(self.state)))
         if zero:
             self.zero = zero
         else:
@@ -73,7 +71,7 @@ class PuzzleState():
             if parent:
                 self.coords_goal = parent.coords_goal
             else:
-                self.coords_goal = coords_2d(range(len(self.state)))
+                self.coords_goal = coords_2d(goal_array, self.side)
             self.dist = self.manhatten_distance_to_goal(self.coords_goal) +\
                 self.depth
 
@@ -98,7 +96,7 @@ class PuzzleState():
 
     def manhatten_distance_to_goal(self, coords_goal):
         dist = 0.0
-        coords = coords_2d(self.state)
+        coords = coords_2d(self.state, self.side)
         for key in range(1, len(self.state)):
             dist += abs(coords_goal[key][0] - coords[key][0]) +\
                 abs(coords_goal[key][1] - coords[key][1])
@@ -166,8 +164,8 @@ class PuzzleState():
             return PuzzleState(new_state, parent=self, direction=direction,
                                zero=self.zero+1, ast=self.ast)
 
-    def get_goal_config(self):
-        return sorted(list(self.state))
+    # def get_goal_config(self):
+    #     return sorted(list(self.state))
 
 
 class Solver():
@@ -208,10 +206,14 @@ class Solver():
     """
     # TODO make a function to compare all methods
 
-    def __init__(self, method, array):
+    def __init__(self, method, array, goal_array=None):
         self._method = method
-        self.initial_state = PuzzleState(list(array), ast=(method == "ast"))
-        self.goal_array = self.initial_state.get_goal_config()
+        if goal_array:
+            self.goal_array = goal_array
+        else:
+            self.goal_array = list(range(len(array)))
+        self.initial_state = PuzzleState(list(array), ast=(method == "ast"), 
+                                         goal_array=self.goal_array)
         self.goal = "".join(map(str, self.goal_array))
         self.statistics = Stats()
         self.final_state = None
@@ -238,6 +240,7 @@ class Solver():
         visited = {''}
         while queue:
             current_state = queue.pop(0)
+            # print(current_state)
             queue_strs.remove(current_state.strs)
             if current_state.depth > self.statistics.max_depth:
                 self.statistics.max_depth = current_state.depth
@@ -355,10 +358,10 @@ class Stats():
     max_depth: int = 0
     path: List[PuzzleState] = field(default_factory=list)
     moves: List[str] = field(default_factory=list)
-    start_time = time.time()
+    start_time: float = field(default_factory=time.time)
 
 
-def coords_2d(arr):
+def coords_2d(arr, side):
     """transform an array to the 2d coordinates
 
         Returns
@@ -366,14 +369,12 @@ def coords_2d(arr):
         dict
             keys are an initial array and values - a tuples of x and y coordinates
     """
-    side = int(math.sqrt(len(arr)))
+    # side = int(math.sqrt(len(arr)))
     return {num: (i//side, i % side) for i, num in enumerate(arr)}
 
 
 def parity(nums):
-    # nums = [num for num in nums if num != 0]
-    # nums = [num for num in nums if num != 0]
-    nums = nums.copy()
+    nums = [num for num in nums if num != 0]
     sor = nums.copy()
     sor.sort()
     par = 1
