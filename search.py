@@ -51,7 +51,8 @@ class PuzzleState():
 
     """
     def __init__(self, tiles_config, parent=None, direction='',
-                 zero=None, ast=False, goal_array=None):
+                 zero=None, ast=False, goal_array=None,
+                 coords2d=None, dist=None):
         self.state = tiles_config
         self.strs = "".join(map(str, self.state))
         self.parent = parent
@@ -72,8 +73,20 @@ class PuzzleState():
                 self.coords_goal = parent.coords_goal
             else:
                 self.coords_goal = coords_2d(goal_array, self.side)
-            self.dist = self.manhatten_distance_to_goal(self.coords_goal) +\
-                self.depth
+            if coords2d:
+                self.coords2d = coords2d
+
+            else:
+                self.coords2d = coords_2d(self.state, self.side)
+
+            # OR
+            if dist:
+                self.dist = dist
+            else:
+                self.dist = self.manhatten_distance_to_goal(self.coords_goal)\
+                    + self.depth
+            # self.dist = self.manhatten_distance_to_goal(self.coords_goal) +\
+            #     self.depth
 
     def __repr__(self):
         """ for pretty printing
@@ -96,10 +109,9 @@ class PuzzleState():
 
     def manhatten_distance_to_goal(self, coords_goal):
         dist = 0.0
-        coords = coords_2d(self.state, self.side)
         for key in range(1, len(self.state)):
-            dist += abs(coords_goal[key][0] - coords[key][0]) +\
-                abs(coords_goal[key][1] - coords[key][1])
+            dist += abs(coords_goal[key][0] - self.coords2d[key][0]) +\
+                abs(coords_goal[key][1] - self.coords2d[key][1])
         return dist
 
     def neighbours(self):
@@ -143,26 +155,53 @@ class PuzzleState():
             an instance of PuzzleState obtained after moving performed
         """
         new_state = list(self.state)
+        coords2d = self.coords2d.copy()
         if direction == "U":
             new_state[self.zero], new_state[self.zero-self.side] =\
                 new_state[self.zero-self.side], new_state[self.zero]
+            coords2d[0] = (coords2d[0][0] - 1, coords2d[0][1])
+            coords2d[new_state[self.zero]] = (coords2d[new_state[self.zero]][0] + 1, 
+                                              coords2d[new_state[self.zero]][1])
             return PuzzleState(new_state, parent=self, direction=direction,
-                               zero=self.zero-self.side, ast=self.ast)
+                               zero=self.zero-self.side, ast=self.ast,
+                               coords2d=coords2d)
+            # OR
+            # coords2d[new_state[self.zero]], coords2d[new_state[self.zero-self.side]] =\
+            #     coords2d[new_state[self.zero-self.side]], coords2d[new_state[self.zero]]
+            # manh_diff = abs(self.coords_goal[new_state[self.zero]] -
+            #                 coords2d[new_state[self.zero]][0])\
+            #         - abs(self.coords_goal[new_state[self.zero]] -
+            #               coords2d[new_state[self.zero-self.side]][0])
+            # return PuzzleState(new_state, parent=self, direction=direction,
+            #                    zero=self.zero-self.side, ast=self.ast,
+            #                    coords2d=coords2d)
         elif direction == "D":
             new_state[self.zero], new_state[self.zero+self.side] =\
                 new_state[self.zero+self.side], new_state[self.zero]
+            coords2d[0] = (coords2d[0][0] + 1, coords2d[0][1])
+            coords2d[new_state[self.zero]] = (coords2d[new_state[self.zero]][0] - 1, 
+                                              coords2d[new_state[self.zero]][1])
             return PuzzleState(new_state, parent=self, direction=direction,
-                               zero=self.zero+self.side, ast=self.ast)
+                               zero=self.zero+self.side, ast=self.ast,
+                               coords2d=coords2d)
         elif direction == "L":
             new_state[self.zero], new_state[self.zero-1] =\
                 new_state[self.zero-1], new_state[self.zero]
+            coords2d[0] = (coords2d[0][0], coords2d[0][1] - 1)
+            coords2d[new_state[self.zero]] = (coords2d[new_state[self.zero]][0], 
+                                              coords2d[new_state[self.zero]][1] + 1)
             return PuzzleState(new_state, parent=self, direction=direction,
-                               zero=self.zero-1, ast=self.ast)
+                               zero=self.zero-1, ast=self.ast,
+                               coords2d=coords2d)
         elif direction == "R":
             new_state[self.zero], new_state[self.zero+1] =\
                 new_state[self.zero+1], new_state[self.zero]
+            coords2d[0] = (coords2d[0][0], coords2d[0][1] + 1)
+            coords2d[new_state[self.zero]] = (coords2d[new_state[self.zero]][0], 
+                                              coords2d[new_state[self.zero]][1] - 1)
             return PuzzleState(new_state, parent=self, direction=direction,
-                               zero=self.zero+1, ast=self.ast)
+                               zero=self.zero+1, ast=self.ast,
+                               coords2d=coords2d)
 
     # def get_goal_config(self):
     #     return sorted(list(self.state))
@@ -308,8 +347,10 @@ class Solver():
                         heapq.heappush(queue, new_s)
                         queue_strs.add(new_s.strs)
                     else:
-                        elem, num = [(el, i) for i, el in enumerate(queue)
-                                     if el.strs == new_s.strs][0]
+                        for i, el in enumerate(queue):
+                            if el.strs == new_s.strs:
+                                elem, num = el, i
+                                break
                         if new_s.depth < elem.depth:
                             queue[num] = new_s
 
@@ -367,7 +408,8 @@ def coords_2d(arr, side):
         Returns
         -------
         dict
-            keys are an initial array and values - a tuples of x and y coordinates
+            keys are an initial array and values -
+            a tuples of x and y coordinates
     """
     # side = int(math.sqrt(len(arr)))
     return {num: (i//side, i % side) for i, num in enumerate(arr)}
