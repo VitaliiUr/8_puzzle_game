@@ -160,8 +160,9 @@ class PuzzleState():
             new_state[self.zero], new_state[self.zero-self.side] =\
                 new_state[self.zero-self.side], new_state[self.zero]
             coords2d[0] = (coords2d[0][0] - 1, coords2d[0][1])
-            coords2d[new_state[self.zero]] = (coords2d[new_state[self.zero]][0] + 1, 
-                                              coords2d[new_state[self.zero]][1])
+            coords2d[new_state[self.zero]] =\
+                (coords2d[new_state[self.zero]][0] + 1,
+                 coords2d[new_state[self.zero]][1])
             return PuzzleState(new_state, parent=self, direction=direction,
                                zero=self.zero-self.side, ast=self.ast,
                                coords2d=coords2d)
@@ -179,8 +180,9 @@ class PuzzleState():
             new_state[self.zero], new_state[self.zero+self.side] =\
                 new_state[self.zero+self.side], new_state[self.zero]
             coords2d[0] = (coords2d[0][0] + 1, coords2d[0][1])
-            coords2d[new_state[self.zero]] = (coords2d[new_state[self.zero]][0] - 1, 
-                                              coords2d[new_state[self.zero]][1])
+            coords2d[new_state[self.zero]] =\
+                (coords2d[new_state[self.zero]][0] - 1,
+                 coords2d[new_state[self.zero]][1])
             return PuzzleState(new_state, parent=self, direction=direction,
                                zero=self.zero+self.side, ast=self.ast,
                                coords2d=coords2d)
@@ -188,8 +190,9 @@ class PuzzleState():
             new_state[self.zero], new_state[self.zero-1] =\
                 new_state[self.zero-1], new_state[self.zero]
             coords2d[0] = (coords2d[0][0], coords2d[0][1] - 1)
-            coords2d[new_state[self.zero]] = (coords2d[new_state[self.zero]][0], 
-                                              coords2d[new_state[self.zero]][1] + 1)
+            coords2d[new_state[self.zero]] =\
+                (coords2d[new_state[self.zero]][0],
+                 coords2d[new_state[self.zero]][1] + 1)
             return PuzzleState(new_state, parent=self, direction=direction,
                                zero=self.zero-1, ast=self.ast,
                                coords2d=coords2d)
@@ -197,8 +200,9 @@ class PuzzleState():
             new_state[self.zero], new_state[self.zero+1] =\
                 new_state[self.zero+1], new_state[self.zero]
             coords2d[0] = (coords2d[0][0], coords2d[0][1] + 1)
-            coords2d[new_state[self.zero]] = (coords2d[new_state[self.zero]][0], 
-                                              coords2d[new_state[self.zero]][1] - 1)
+            coords2d[new_state[self.zero]] =\
+                (coords2d[new_state[self.zero]][0],
+                 coords2d[new_state[self.zero]][1] - 1)
             return PuzzleState(new_state, parent=self, direction=direction,
                                zero=self.zero+1, ast=self.ast,
                                coords2d=coords2d)
@@ -251,7 +255,7 @@ class Solver():
             self.goal_array = goal_array
         else:
             self.goal_array = list(range(len(array)))
-        self.initial_state = PuzzleState(list(array), ast=(method == "ast"), 
+        self.initial_state = PuzzleState(list(array), ast=(method == "ast"),
                                          goal_array=self.goal_array)
         self.goal = "".join(map(str, self.goal_array))
         self.statistics = Stats()
