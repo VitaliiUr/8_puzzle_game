@@ -75,7 +75,6 @@ class PuzzleState():
                 self.coords_goal = coords_2d(goal_array, self.side)
             if coords2d:
                 self.coords2d = coords2d
-
             else:
                 self.coords2d = coords_2d(self.state, self.side)
 
@@ -163,19 +162,17 @@ class PuzzleState():
             coords2d[new_state[self.zero]] =\
                 (coords2d[new_state[self.zero]][0] + 1,
                  coords2d[new_state[self.zero]][1])
-            return PuzzleState(new_state, parent=self, direction=direction,
-                               zero=self.zero-self.side, ast=self.ast,
-                               coords2d=coords2d)
-            # OR
-            # coords2d[new_state[self.zero]], coords2d[new_state[self.zero-self.side]] =\
-            #     coords2d[new_state[self.zero-self.side]], coords2d[new_state[self.zero]]
-            # manh_diff = abs(self.coords_goal[new_state[self.zero]] -
-            #                 coords2d[new_state[self.zero]][0])\
-            #         - abs(self.coords_goal[new_state[self.zero]] -
-            #               coords2d[new_state[self.zero-self.side]][0])
             # return PuzzleState(new_state, parent=self, direction=direction,
             #                    zero=self.zero-self.side, ast=self.ast,
             #                    coords2d=coords2d)
+            # OR
+            manh_diff = abs(self.coords_goal[new_state[self.zero]][0] -
+                            coords2d[new_state[self.zero]][0])\
+                    - abs(self.coords_goal[new_state[self.zero]][0] -
+                          self.coords2d[new_state[self.zero]][0])
+            return PuzzleState(new_state, parent=self, direction=direction,
+                               zero=self.zero-self.side, ast=self.ast,
+                               coords2d=coords2d, dist=self.dist+manh_diff+1)
         elif direction == "D":
             new_state[self.zero], new_state[self.zero+self.side] =\
                 new_state[self.zero+self.side], new_state[self.zero]
@@ -183,9 +180,17 @@ class PuzzleState():
             coords2d[new_state[self.zero]] =\
                 (coords2d[new_state[self.zero]][0] - 1,
                  coords2d[new_state[self.zero]][1])
+            # return PuzzleState(new_state, parent=self, direction=direction,
+            #                    zero=self.zero+self.side, ast=self.ast,
+            #                    coords2d=coords2d)
+            # OR
+            manh_diff = abs(self.coords_goal[new_state[self.zero]][0] -
+                            coords2d[new_state[self.zero]][0])\
+                    - abs(self.coords_goal[new_state[self.zero]][0] -
+                          self.coords2d[new_state[self.zero]][0])
             return PuzzleState(new_state, parent=self, direction=direction,
                                zero=self.zero+self.side, ast=self.ast,
-                               coords2d=coords2d)
+                               coords2d=coords2d, dist=self.dist+manh_diff+1)
         elif direction == "L":
             new_state[self.zero], new_state[self.zero-1] =\
                 new_state[self.zero-1], new_state[self.zero]
@@ -193,9 +198,17 @@ class PuzzleState():
             coords2d[new_state[self.zero]] =\
                 (coords2d[new_state[self.zero]][0],
                  coords2d[new_state[self.zero]][1] + 1)
+            # return PuzzleState(new_state, parent=self, direction=direction,
+            #                    zero=self.zero-1, ast=self.ast,
+            #                    coords2d=coords2d)
+            # OR
+            manh_diff =  abs(self.coords_goal[new_state[self.zero]][1] -
+                            coords2d[new_state[self.zero]][1])\
+                    - abs(self.coords_goal[new_state[self.zero]][1] -
+                          self.coords2d[new_state[self.zero]][1])
             return PuzzleState(new_state, parent=self, direction=direction,
                                zero=self.zero-1, ast=self.ast,
-                               coords2d=coords2d)
+                               coords2d=coords2d, dist=self.dist+manh_diff+1)
         elif direction == "R":
             new_state[self.zero], new_state[self.zero+1] =\
                 new_state[self.zero+1], new_state[self.zero]
@@ -203,9 +216,17 @@ class PuzzleState():
             coords2d[new_state[self.zero]] =\
                 (coords2d[new_state[self.zero]][0],
                  coords2d[new_state[self.zero]][1] - 1)
+            # return PuzzleState(new_state, parent=self, direction=direction,
+            #                    zero=self.zero+1, ast=self.ast,
+            #                    coords2d=coords2d)
+            # OR
+            manh_diff =  abs(self.coords_goal[new_state[self.zero]][1] -
+                            coords2d[new_state[self.zero]][1])\
+                    - abs(self.coords_goal[new_state[self.zero]][1] -
+                          self.coords2d[new_state[self.zero]][1])
             return PuzzleState(new_state, parent=self, direction=direction,
                                zero=self.zero+1, ast=self.ast,
-                               coords2d=coords2d)
+                               coords2d=coords2d, dist=self.dist+manh_diff+1)
 
     # def get_goal_config(self):
     #     return sorted(list(self.state))
