@@ -162,14 +162,10 @@ class PuzzleState():
             coords2d[new_state[self.zero]] =\
                 (coords2d[new_state[self.zero]][0] + 1,
                  coords2d[new_state[self.zero]][1])
-            # return PuzzleState(new_state, parent=self, direction=direction,
-            #                    zero=self.zero-self.side, ast=self.ast,
-            #                    coords2d=coords2d)
-            # OR
             manh_diff = abs(self.coords_goal[new_state[self.zero]][0] -
                             coords2d[new_state[self.zero]][0])\
-                    - abs(self.coords_goal[new_state[self.zero]][0] -
-                          self.coords2d[new_state[self.zero]][0])
+                - abs(self.coords_goal[new_state[self.zero]][0] -
+                      self.coords2d[new_state[self.zero]][0])
             return PuzzleState(new_state, parent=self, direction=direction,
                                zero=self.zero-self.side, ast=self.ast,
                                coords2d=coords2d, dist=self.dist+manh_diff+1)
@@ -180,14 +176,10 @@ class PuzzleState():
             coords2d[new_state[self.zero]] =\
                 (coords2d[new_state[self.zero]][0] - 1,
                  coords2d[new_state[self.zero]][1])
-            # return PuzzleState(new_state, parent=self, direction=direction,
-            #                    zero=self.zero+self.side, ast=self.ast,
-            #                    coords2d=coords2d)
-            # OR
             manh_diff = abs(self.coords_goal[new_state[self.zero]][0] -
                             coords2d[new_state[self.zero]][0])\
-                    - abs(self.coords_goal[new_state[self.zero]][0] -
-                          self.coords2d[new_state[self.zero]][0])
+                - abs(self.coords_goal[new_state[self.zero]][0] -
+                      self.coords2d[new_state[self.zero]][0])
             return PuzzleState(new_state, parent=self, direction=direction,
                                zero=self.zero+self.side, ast=self.ast,
                                coords2d=coords2d, dist=self.dist+manh_diff+1)
@@ -198,14 +190,10 @@ class PuzzleState():
             coords2d[new_state[self.zero]] =\
                 (coords2d[new_state[self.zero]][0],
                  coords2d[new_state[self.zero]][1] + 1)
-            # return PuzzleState(new_state, parent=self, direction=direction,
-            #                    zero=self.zero-1, ast=self.ast,
-            #                    coords2d=coords2d)
-            # OR
-            manh_diff =  abs(self.coords_goal[new_state[self.zero]][1] -
+            manh_diff = abs(self.coords_goal[new_state[self.zero]][1] -
                             coords2d[new_state[self.zero]][1])\
-                    - abs(self.coords_goal[new_state[self.zero]][1] -
-                          self.coords2d[new_state[self.zero]][1])
+                - abs(self.coords_goal[new_state[self.zero]][1] -
+                      self.coords2d[new_state[self.zero]][1])
             return PuzzleState(new_state, parent=self, direction=direction,
                                zero=self.zero-1, ast=self.ast,
                                coords2d=coords2d, dist=self.dist+manh_diff+1)
@@ -216,14 +204,10 @@ class PuzzleState():
             coords2d[new_state[self.zero]] =\
                 (coords2d[new_state[self.zero]][0],
                  coords2d[new_state[self.zero]][1] - 1)
-            # return PuzzleState(new_state, parent=self, direction=direction,
-            #                    zero=self.zero+1, ast=self.ast,
-            #                    coords2d=coords2d)
-            # OR
-            manh_diff =  abs(self.coords_goal[new_state[self.zero]][1] -
+            manh_diff = abs(self.coords_goal[new_state[self.zero]][1] -
                             coords2d[new_state[self.zero]][1])\
-                    - abs(self.coords_goal[new_state[self.zero]][1] -
-                          self.coords2d[new_state[self.zero]][1])
+                - abs(self.coords_goal[new_state[self.zero]][1] -
+                      self.coords2d[new_state[self.zero]][1])
             return PuzzleState(new_state, parent=self, direction=direction,
                                zero=self.zero+1, ast=self.ast,
                                coords2d=coords2d, dist=self.dist+manh_diff+1)
