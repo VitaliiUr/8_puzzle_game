@@ -333,12 +333,14 @@ class Solver():
 
     def ast(self, maxnodes=200000):
         queue = []
-        heapq.heappush(queue, self.initial_state)
+        heapq.heappush(queue, (self.initial_state, self.initial_state.depth))
         queue_strs = {self.initial_state.strs}
         visited = {''}
         while queue:
-            current_state = heapq.heappop(queue)
-            queue_strs.remove(current_state.strs)
+            state = heapq.heappop(queue)
+            # print(state[0].strs)
+            current_state = state[0]
+            # queue_strs.remove(current_state.strs)
             if current_state.depth > self.statistics.max_depth:
                 self.statistics.max_depth = current_state.depth
 
@@ -351,17 +353,18 @@ class Solver():
 
             for d in current_state.neighbours():
                 new_s = current_state.make_move(d)
-                if new_s.strs not in visited:
-                    if new_s.strs not in queue_strs:
-                        heapq.heappush(queue, new_s)
-                        queue_strs.add(new_s.strs)
-                    else:
-                        for i, el in enumerate(queue):
-                            if el.strs == new_s.strs:
-                                elem, num = el, i
-                                break
-                        if new_s.depth < elem.depth:
-                            queue[num] = new_s
+                # if new_s.strs not in visited:
+                    # if new_s.strs not in queue_strs:
+                heapq.heappush(queue, (new_s, new_s.depth))
+                queue_strs.add(new_s.strs)
+                    # TODO sorted dictionary
+                    # else:
+                    #     for i, el in enumerate(queue):
+                    #         if el[0].strs == new_s.strs:
+                    #             elem, num = el[0], i
+                    #             break
+                    #     if new_s.depth < elem.depth:
+                    #         queue[num] = (new_s, new_s.depth)
 
     def get_path(self):
         """add the full path of final element to the statistics object"""
