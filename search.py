@@ -59,11 +59,11 @@ class PuzzleState():
         self.direction = direction
         self.ast = ast
         if parent:
-            self.side = parent.side
+            # side = parent.side
             self.depth = parent.depth + 1
         else:
             self.depth = 0
-            self.side = int(math.sqrt(len(tiles_config)))
+            # self.side = int(math.sqrt(len(tiles_config)))
         if zero:
             self.zero = zero
         else:
@@ -72,11 +72,11 @@ class PuzzleState():
             if parent:
                 self.coords_goal = parent.coords_goal
             else:
-                self.coords_goal = coords_2d(goal_array, self.side)
+                self.coords_goal = coords_2d(goal_array)
             if coords2d:
                 self.coords2d = coords2d
             else:
-                self.coords2d = coords_2d(self.state, self.side)
+                self.coords2d = coords_2d(self.state)
 
             # OR
             if dist:
@@ -93,9 +93,10 @@ class PuzzleState():
         str
             configuration with line breaks to print a tiles in 2d format
         """
+        global side
         return "\n".join(
-            [" ".join(map(str, self.state[i*self.side:(i+1)*self.side]))
-             for i in range(self.side)]
+            [" ".join(map(str, self.state[i*side:(i+1)*side]))
+             for i in range(side)]
                         ) + "\n"
 
     def __lt__(self, other):
@@ -119,24 +120,26 @@ class PuzzleState():
         str
             direction where it is possible to move zero element
         """
-        if self.zero >= self.side and self.direction != "D":
+        global side
+        if self.zero >= side and self.direction != "D":
             yield "U"
-        if self.zero < len(self.state) - self.side and self.direction != "U":
+        if self.zero < len(self.state) - side and self.direction != "U":
             yield "D"
-        if self.zero % self.side != 0 and self.direction != "R":
+        if self.zero % side != 0 and self.direction != "R":
             yield "L"
-        if self.zero % self.side != self.side - 1 and self.direction != "L":
+        if self.zero % side != side - 1 and self.direction != "L":
             yield "R"
 
     def neighbours_rev(self):
         """the same as neightbours(), but in reversed order"""
-        if self.zero % self.side != self.side - 1 and self.direction != "L":
+        global side
+        if self.zero % side != side - 1 and self.direction != "L":
             yield "R"
-        if self.zero % self.side != 0 and self.direction != "R":
+        if self.zero % side != 0 and self.direction != "R":
             yield "L"
-        if self.zero < len(self.state) - self.side and self.direction != "U":
+        if self.zero < len(self.state) - side and self.direction != "U":
             yield "D"
-        if self.zero >= self.side and self.direction != "D":
+        if self.zero >= side and self.direction != "D":
             yield "U"
 
     def make_move(self, direction):
@@ -153,9 +156,10 @@ class PuzzleState():
         """
         new_state = list(self.state)
         coords2d = self.coords2d.copy()
+        global side
         if direction == "U":
-            new_state[self.zero], new_state[self.zero-self.side] =\
-                new_state[self.zero-self.side], new_state[self.zero]
+            new_state[self.zero], new_state[self.zero-side] =\
+                new_state[self.zero-side], new_state[self.zero]
             coords2d[0] = (coords2d[0][0] - 1, coords2d[0][1])
             coords2d[new_state[self.zero]] =\
                 (coords2d[new_state[self.zero]][0] + 1,
@@ -165,11 +169,11 @@ class PuzzleState():
                 - abs(self.coords_goal[new_state[self.zero]][0] -
                       self.coords2d[new_state[self.zero]][0])
             return PuzzleState(new_state, parent=self, direction=direction,
-                               zero=self.zero-self.side, ast=self.ast,
+                               zero=self.zero-side, ast=self.ast,
                                coords2d=coords2d, dist=self.dist+manh_diff+1)
         elif direction == "D":
-            new_state[self.zero], new_state[self.zero+self.side] =\
-                new_state[self.zero+self.side], new_state[self.zero]
+            new_state[self.zero], new_state[self.zero+side] =\
+                new_state[self.zero+side], new_state[self.zero]
             coords2d[0] = (coords2d[0][0] + 1, coords2d[0][1])
             coords2d[new_state[self.zero]] =\
                 (coords2d[new_state[self.zero]][0] - 1,
@@ -179,7 +183,7 @@ class PuzzleState():
                 - abs(self.coords_goal[new_state[self.zero]][0] -
                       self.coords2d[new_state[self.zero]][0])
             return PuzzleState(new_state, parent=self, direction=direction,
-                               zero=self.zero+self.side, ast=self.ast,
+                               zero=self.zero+side, ast=self.ast,
                                coords2d=coords2d, dist=self.dist+manh_diff+1)
         elif direction == "L":
             new_state[self.zero], new_state[self.zero-1] =\
@@ -253,6 +257,8 @@ class Solver():
     # TODO make a function to compare all methods
 
     def __init__(self, method, array, goal_array=None):
+        global side
+        side = int(math.sqrt(len(array)))
         self._method = method
         if goal_array:
             self.goal_array = goal_array
@@ -388,15 +394,16 @@ class Solver():
         if self.final_state:
             print("search_depth: ", self.final_state.depth)
         print("max_depth: ", self.statistics.max_depth)
-        print("running_time: ", time.time() - self.statistics.start_time)
+        print("running_time: ", round(time.time() - self.statistics.start_time, 3), "s")
         print("max_ram_usage: {} MB"
               .format(resource.getrusage(RUSAGE_SELF)[2]/1000))
 
     def check_solvability(self):
         # return True
         # print(parity(self.initial_state.state))
+        global side
         return parity(self.initial_state.state) ==\
-               parity(self.goal_array) * (-1)**(self.initial_state.side + 1)
+               parity(self.goal_array) * (-1)**(side + 1)
 
 
 @dataclass
@@ -408,7 +415,7 @@ class Stats():
     start_time: float = field(default_factory=time.time)
 
 
-def coords_2d(arr, side):
+def coords_2d(arr):
     """transform an array to the 2d coordinates
 
         Returns
@@ -418,6 +425,7 @@ def coords_2d(arr, side):
             a tuples of x and y coordinates
     """
     # side = int(math.sqrt(len(arr)))
+    global side
     return {num: (i//side, i % side) for i, num in enumerate(arr)}
 
 
