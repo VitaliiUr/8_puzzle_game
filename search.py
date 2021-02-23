@@ -59,30 +59,22 @@ class PuzzleState():
         self.direction = direction
         self.ast = ast
         if parent:
-            # side = parent.side
             self.depth = parent.depth + 1
         else:
             self.depth = 0
-            # self.side = int(math.sqrt(len(tiles_config)))
         if zero:
             self.zero = zero
         else:
             self.zero = self.state.index(0)
         if ast:
-            if parent:
-                self.coords_goal = parent.coords_goal
-            else:
-                self.coords_goal = coords_2d(goal_array)
             if coords2d:
                 self.coords2d = coords2d
             else:
                 self.coords2d = coords_2d(self.state)
-
-            # OR
             if dist:
                 self.dist = dist
             else:
-                self.dist = self.manhatten_distance_to_goal(self.coords_goal)\
+                self.dist = self.manhatten_distance_to_goal()\
                     + self.depth
 
     def __repr__(self):
@@ -105,8 +97,9 @@ class PuzzleState():
         # (other.dist, "UDLR".find(other.direction))
         return self.dist < other.dist
 
-    def manhatten_distance_to_goal(self, coords_goal):
+    def manhatten_distance_to_goal(self):
         dist = 0.0
+        global coords_goal
         for key in range(1, len(self.state)):
             dist += abs(coords_goal[key][0] - self.coords2d[key][0]) +\
                 abs(coords_goal[key][1] - self.coords2d[key][1])
@@ -156,7 +149,7 @@ class PuzzleState():
         """
         new_state = list(self.state)
         coords2d = self.coords2d.copy()
-        global side
+        global side, coords_goal
         if direction == "U":
             new_state[self.zero], new_state[self.zero-side] =\
                 new_state[self.zero-side], new_state[self.zero]
@@ -164,9 +157,9 @@ class PuzzleState():
             coords2d[new_state[self.zero]] =\
                 (coords2d[new_state[self.zero]][0] + 1,
                  coords2d[new_state[self.zero]][1])
-            manh_diff = abs(self.coords_goal[new_state[self.zero]][0] -
+            manh_diff = abs(coords_goal[new_state[self.zero]][0] -
                             coords2d[new_state[self.zero]][0])\
-                - abs(self.coords_goal[new_state[self.zero]][0] -
+                - abs(coords_goal[new_state[self.zero]][0] -
                       self.coords2d[new_state[self.zero]][0])
             return PuzzleState(new_state, parent=self, direction=direction,
                                zero=self.zero-side, ast=self.ast,
@@ -178,9 +171,9 @@ class PuzzleState():
             coords2d[new_state[self.zero]] =\
                 (coords2d[new_state[self.zero]][0] - 1,
                  coords2d[new_state[self.zero]][1])
-            manh_diff = abs(self.coords_goal[new_state[self.zero]][0] -
+            manh_diff = abs(coords_goal[new_state[self.zero]][0] -
                             coords2d[new_state[self.zero]][0])\
-                - abs(self.coords_goal[new_state[self.zero]][0] -
+                - abs(coords_goal[new_state[self.zero]][0] -
                       self.coords2d[new_state[self.zero]][0])
             return PuzzleState(new_state, parent=self, direction=direction,
                                zero=self.zero+side, ast=self.ast,
@@ -192,9 +185,9 @@ class PuzzleState():
             coords2d[new_state[self.zero]] =\
                 (coords2d[new_state[self.zero]][0],
                  coords2d[new_state[self.zero]][1] + 1)
-            manh_diff = abs(self.coords_goal[new_state[self.zero]][1] -
+            manh_diff = abs(coords_goal[new_state[self.zero]][1] -
                             coords2d[new_state[self.zero]][1])\
-                - abs(self.coords_goal[new_state[self.zero]][1] -
+                - abs(coords_goal[new_state[self.zero]][1] -
                       self.coords2d[new_state[self.zero]][1])
             return PuzzleState(new_state, parent=self, direction=direction,
                                zero=self.zero-1, ast=self.ast,
@@ -206,9 +199,9 @@ class PuzzleState():
             coords2d[new_state[self.zero]] =\
                 (coords2d[new_state[self.zero]][0],
                  coords2d[new_state[self.zero]][1] - 1)
-            manh_diff = abs(self.coords_goal[new_state[self.zero]][1] -
+            manh_diff = abs(coords_goal[new_state[self.zero]][1] -
                             coords2d[new_state[self.zero]][1])\
-                - abs(self.coords_goal[new_state[self.zero]][1] -
+                - abs(coords_goal[new_state[self.zero]][1] -
                       self.coords2d[new_state[self.zero]][1])
             return PuzzleState(new_state, parent=self, direction=direction,
                                zero=self.zero+1, ast=self.ast,
@@ -257,13 +250,14 @@ class Solver():
     # TODO make a function to compare all methods
 
     def __init__(self, method, array, goal_array=None):
-        global side
+        global side, coords_goal
         side = int(math.sqrt(len(array)))
         self._method = method
         if goal_array:
             self.goal_array = goal_array
         else:
             self.goal_array = list(range(len(array)))
+        coords_goal = coords_2d(goal_array)
         self.initial_state = PuzzleState(list(array), ast=(method == "ast"),
                                          goal_array=self.goal_array)
         self.goal = ",".join(map(str, self.goal_array))
@@ -342,10 +336,8 @@ class Solver():
                                 self.initial_state.strs))
         visited = {''}
         while queue:
-            # current_state = heapq.heappop(queue)
             dist, str = heapq.heappop(hqueue)
             current_state = queue[str]
-            # del queue[str]
             if current_state.depth > self.statistics.max_depth:
                 self.statistics.max_depth = current_state.depth
 
