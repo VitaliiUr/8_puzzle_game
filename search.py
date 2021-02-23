@@ -334,11 +334,12 @@ class Solver():
     def ast(self, maxnodes=200000):
         queue = []
         heapq.heappush(queue, self.initial_state)
-        queue_strs = {self.initial_state.strs}
+        queue_strs = {self.initial_state.strs: self.initial_state.depth}
         visited = {''}
         while queue:
             current_state = heapq.heappop(queue)
-            queue_strs.remove(current_state.strs)
+            # queue_strs.remove(current_state.strs)
+            del queue_strs[current_state.strs]
             if current_state.depth > self.statistics.max_depth:
                 self.statistics.max_depth = current_state.depth
 
@@ -354,14 +355,14 @@ class Solver():
                 if new_s.strs not in visited:
                     if new_s.strs not in queue_strs:
                         heapq.heappush(queue, new_s)
-                        queue_strs.add(new_s.strs)
-                    else:
+                        # queue_strs.add(new_s.strs)
+                        queue_strs[new_s.strs] = new_s.depth
+                    elif queue_strs[new_s.strs] > new_s.depth:
                         for i, el in enumerate(queue):
                             if el.strs == new_s.strs:
-                                elem, num = el, i
+                                queue[i] = new_s
+                                queue_strs[new_s.strs] = new_s.depth
                                 break
-                        if new_s.depth < elem.depth:
-                            queue[num] = new_s
 
     def get_path(self):
         """add the full path of final element to the statistics object"""
