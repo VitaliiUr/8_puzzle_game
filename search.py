@@ -125,12 +125,12 @@ class PuzzleState():
             yield "D"
         if self.zero % self.side != 0 and self.direction != "R":
             yield "L"
-        if self.zero % self.side != 2 and self.direction != "L":
+        if self.zero % self.side != self.side - 1 and self.direction != "L":
             yield "R"
 
     def neighbours_rev(self):
         """the same as neightbours(), but in reversed order"""
-        if self.zero % self.side != 2 and self.direction != "L":
+        if self.zero % self.side != self.side - 1 and self.direction != "L":
             yield "R"
         if self.zero % self.side != 0 and self.direction != "R":
             yield "L"
@@ -332,8 +332,8 @@ class Solver():
     def ast(self, maxnodes=200000):
         queue = {self.initial_state.strs: self.initial_state}
         hqueue = []
-        heapq.heappush(hqueue, (self.initial_state.dist, self.initial_state.strs))
-        # queue_strs = {self.initial_state.strs: self.initial_state.depth}
+        heapq.heappush(hqueue, (self.initial_state.dist,
+                                self.initial_state.strs))
         visited = {''}
         while queue:
             # current_state = heapq.heappop(queue)
