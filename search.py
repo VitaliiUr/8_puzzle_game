@@ -31,7 +31,7 @@ class PuzzleState():
     ----------
         state : list[int]
             tiles configuration
-        strs : str
+        string_state : str
             tiles configuration as string
         parent: PuzzleState, optional
             PuzzleState which led to the current, by default None
@@ -40,21 +40,17 @@ class PuzzleState():
         ast : bool, optional
             True if A* method is used
             (additional attributes should be initialized), by default False
-        side : int
-            size of 2d space of tiles
         depth : int
             depth of the current element in the search tree
-        coords_goal : dict
-            2d coordinates of the goal configuration
-        zero : int
+        zero_index : int
             index of the zero element
 
     """
     def __init__(self, tiles_config, parent=None, direction='',
-                 zero=None, ast=False, goal_array=None,
-                 coords2d=None, dist=None):
+                 zero_index=None, ast=False, goal_array=None,
+                 coords2d=None, score=None):
         self.state = tiles_config
-        self.strs = ",".join(map(str, self.state))
+        self.string_state = ",".join(map(str, self.state))
         self.parent = parent
         self.direction = direction
         self.ast = ast
@@ -62,19 +58,19 @@ class PuzzleState():
             self.depth = parent.depth + 1
         else:
             self.depth = 0
-        if zero:
-            self.zero = zero
+        if zero_index:
+            self.zero_index = zero_index
         else:
-            self.zero = self.state.index(0)
+            self.zero_index = self.state.index(0)
         if ast:
             if coords2d:
                 self.coords2d = coords2d
             else:
                 self.coords2d = coords_2d(self.state)
-            if dist:
-                self.dist = dist
+            if score:
+                self.score = score
             else:
-                self.dist = self.manhatten_distance_to_goal()\
+                self.score = self.manhatten_distance_to_goal()\
                     + self.depth
 
     def __repr__(self):
@@ -93,9 +89,7 @@ class PuzzleState():
 
     def __lt__(self, other):
         """comparison between two PuzzleState instances"""
-        # return (self.dist, "UDLR".find(self.direction)) <\
-        # (other.dist, "UDLR".find(other.direction))
-        return self.dist < other.dist
+        return self.score < other.score
 
     def manhatten_distance_to_goal(self):
         dist = 0.0
@@ -114,25 +108,25 @@ class PuzzleState():
             direction where it is possible to move zero element
         """
         global side
-        if self.zero >= side and self.direction != "D":
+        if self.zero_index >= side and self.direction != "D":
             yield "U"
-        if self.zero < len(self.state) - side and self.direction != "U":
+        if self.zero_index < len(self.state) - side and self.direction != "U":
             yield "D"
-        if self.zero % side != 0 and self.direction != "R":
+        if self.zero_index % side != 0 and self.direction != "R":
             yield "L"
-        if self.zero % side != side - 1 and self.direction != "L":
+        if self.zero_index % side != side - 1 and self.direction != "L":
             yield "R"
 
     def neighbours_rev(self):
         """the same as neightbours(), but in reversed order"""
         global side
-        if self.zero % side != side - 1 and self.direction != "L":
+        if self.zero_index % side != side - 1 and self.direction != "L":
             yield "R"
-        if self.zero % side != 0 and self.direction != "R":
+        if self.zero_index % side != 0 and self.direction != "R":
             yield "L"
-        if self.zero < len(self.state) - side and self.direction != "U":
+        if self.zero_index < len(self.state) - side and self.direction != "U":
             yield "D"
-        if self.zero >= side and self.direction != "D":
+        if self.zero_index >= side and self.direction != "D":
             yield "U"
 
     def make_move(self, direction):
@@ -151,64 +145,57 @@ class PuzzleState():
         coords2d = self.coords2d.copy()
         global side, coords_goal
         if direction == "U":
-            new_state[self.zero], new_state[self.zero-side] =\
-                new_state[self.zero-side], new_state[self.zero]
+            new_state[self.zero_index], new_state[self.zero_index-side] =\
+                new_state[self.zero_index-side], new_state[self.zero_index]
             coords2d[0] = (coords2d[0][0] - 1, coords2d[0][1])
-            coords2d[new_state[self.zero]] =\
-                (coords2d[new_state[self.zero]][0] + 1,
-                 coords2d[new_state[self.zero]][1])
-            manh_diff = abs(coords_goal[new_state[self.zero]][0] -
-                            coords2d[new_state[self.zero]][0])\
-                - abs(coords_goal[new_state[self.zero]][0] -
-                      self.coords2d[new_state[self.zero]][0])
-            return PuzzleState(new_state, parent=self, direction=direction,
-                               zero=self.zero-side, ast=self.ast,
-                               coords2d=coords2d, dist=self.dist+manh_diff+1)
+            coords2d[new_state[self.zero_index]] =\
+                (coords2d[new_state[self.zero_index]][0] + 1,
+                 coords2d[new_state[self.zero_index]][1])
+            manh_diff = abs(coords_goal[new_state[self.zero_index]][0] -
+                            coords2d[new_state[self.zero_index]][0])\
+                - abs(coords_goal[new_state[self.zero_index]][0] -
+                      self.coords2d[new_state[self.zero_index]][0])
+            zero_index_delta = -side
         elif direction == "D":
-            new_state[self.zero], new_state[self.zero+side] =\
-                new_state[self.zero+side], new_state[self.zero]
+            new_state[self.zero_index], new_state[self.zero_index+side] =\
+                new_state[self.zero_index+side], new_state[self.zero_index]
             coords2d[0] = (coords2d[0][0] + 1, coords2d[0][1])
-            coords2d[new_state[self.zero]] =\
-                (coords2d[new_state[self.zero]][0] - 1,
-                 coords2d[new_state[self.zero]][1])
-            manh_diff = abs(coords_goal[new_state[self.zero]][0] -
-                            coords2d[new_state[self.zero]][0])\
-                - abs(coords_goal[new_state[self.zero]][0] -
-                      self.coords2d[new_state[self.zero]][0])
-            return PuzzleState(new_state, parent=self, direction=direction,
-                               zero=self.zero+side, ast=self.ast,
-                               coords2d=coords2d, dist=self.dist+manh_diff+1)
+            coords2d[new_state[self.zero_index]] =\
+                (coords2d[new_state[self.zero_index]][0] - 1,
+                 coords2d[new_state[self.zero_index]][1])
+            manh_diff = abs(coords_goal[new_state[self.zero_index]][0] -
+                            coords2d[new_state[self.zero_index]][0])\
+                - abs(coords_goal[new_state[self.zero_index]][0] -
+                      self.coords2d[new_state[self.zero_index]][0])
+            zero_index_delta = side
         elif direction == "L":
-            new_state[self.zero], new_state[self.zero-1] =\
-                new_state[self.zero-1], new_state[self.zero]
+            new_state[self.zero_index], new_state[self.zero_index-1] =\
+                new_state[self.zero_index-1], new_state[self.zero_index]
             coords2d[0] = (coords2d[0][0], coords2d[0][1] - 1)
-            coords2d[new_state[self.zero]] =\
-                (coords2d[new_state[self.zero]][0],
-                 coords2d[new_state[self.zero]][1] + 1)
-            manh_diff = abs(coords_goal[new_state[self.zero]][1] -
-                            coords2d[new_state[self.zero]][1])\
-                - abs(coords_goal[new_state[self.zero]][1] -
-                      self.coords2d[new_state[self.zero]][1])
-            return PuzzleState(new_state, parent=self, direction=direction,
-                               zero=self.zero-1, ast=self.ast,
-                               coords2d=coords2d, dist=self.dist+manh_diff+1)
+            coords2d[new_state[self.zero_index]] =\
+                (coords2d[new_state[self.zero_index]][0],
+                 coords2d[new_state[self.zero_index]][1] + 1)
+            manh_diff = abs(coords_goal[new_state[self.zero_index]][1] -
+                            coords2d[new_state[self.zero_index]][1])\
+                - abs(coords_goal[new_state[self.zero_index]][1] -
+                      self.coords2d[new_state[self.zero_index]][1])
+            zero_index_delta = -1
         elif direction == "R":
-            new_state[self.zero], new_state[self.zero+1] =\
-                new_state[self.zero+1], new_state[self.zero]
+            new_state[self.zero_index], new_state[self.zero_index+1] =\
+                new_state[self.zero_index+1], new_state[self.zero_index]
             coords2d[0] = (coords2d[0][0], coords2d[0][1] + 1)
-            coords2d[new_state[self.zero]] =\
-                (coords2d[new_state[self.zero]][0],
-                 coords2d[new_state[self.zero]][1] - 1)
-            manh_diff = abs(coords_goal[new_state[self.zero]][1] -
-                            coords2d[new_state[self.zero]][1])\
-                - abs(coords_goal[new_state[self.zero]][1] -
-                      self.coords2d[new_state[self.zero]][1])
-            return PuzzleState(new_state, parent=self, direction=direction,
-                               zero=self.zero+1, ast=self.ast,
-                               coords2d=coords2d, dist=self.dist+manh_diff+1)
-
-    # def get_goal_config(self):
-    #     return sorted(list(self.state))
+            coords2d[new_state[self.zero_index]] =\
+                (coords2d[new_state[self.zero_index]][0],
+                 coords2d[new_state[self.zero_index]][1] - 1)
+            manh_diff = abs(coords_goal[new_state[self.zero_index]][1] -
+                            coords2d[new_state[self.zero_index]][1])\
+                - abs(coords_goal[new_state[self.zero_index]][1] -
+                      self.coords2d[new_state[self.zero_index]][1])
+            zero_index_delta = 1
+        return PuzzleState(new_state, parent=self, direction=direction,
+                           zero_index=self.zero_index + zero_index_delta,
+                           ast=self.ast,
+                           coords2d=coords2d, score=self.score+manh_diff+1)
 
 
 class Solver():
@@ -257,7 +244,7 @@ class Solver():
             self.goal_array = goal_array
         else:
             self.goal_array = list(range(len(array)))
-        coords_goal = coords_2d(goal_array)
+        coords_goal = coords_2d(self.goal_array)
         self.initial_state = PuzzleState(list(array), ast=(method == "ast"),
                                          goal_array=self.goal_array)
         self.goal = ",".join(map(str, self.goal_array))
@@ -267,7 +254,7 @@ class Solver():
             raise AttributeError("The initial state is not solvable")
 
     def is_goal(self, state):
-        return state.strs == self.goal
+        return state.string_state == self.goal
 
     def solve(self, maxnodes=500000):
         if self._method == "bfs":
@@ -280,14 +267,14 @@ class Solver():
             self.get_path()
         return self.final_state
 
-    def bfs(self, maxnodes=200000):
+    def bfs(self, maxnodes):
         queue = [self.initial_state]
-        queue_strs = {self.initial_state.strs}
+        queue_strs = {self.initial_state.string_state}
         visited = {''}
         while queue:
             current_state = queue.pop(0)
             # print(current_state)
-            queue_strs.remove(current_state.strs)
+            queue_strs.remove(current_state.string_state)
             if current_state.depth > self.statistics.max_depth:
                 self.statistics.max_depth = current_state.depth
 
@@ -296,22 +283,22 @@ class Solver():
             self.statistics.nodes += 1
             if self.statistics.nodes > maxnodes:
                 break
-            visited.add(current_state.strs)
+            visited.add(current_state.string_state)
 
             for d in current_state.neighbours():
                 new_s = current_state.make_move(d)
-                if (new_s.strs not in visited) and\
-                        (new_s.strs not in queue_strs):
+                if (new_s.string_state not in visited) and\
+                        (new_s.string_state not in queue_strs):
                     queue.append(new_s)
-                    queue_strs.add(new_s.strs)
+                    queue_strs.add(new_s.string_state)
 
-    def dfs(self, maxnodes=200000):
+    def dfs(self, maxnodes):
         queue = [self.initial_state]
-        queue_strs = {self.initial_state.strs}
+        queue_strs = {self.initial_state.string_state}
         visited = {''}
         while queue:
             current_state = queue.pop()
-            queue_strs.remove(current_state.strs)
+            queue_strs.remove(current_state.string_state)
             if current_state.depth > self.statistics.max_depth:
                 self.statistics.max_depth = current_state.depth
 
@@ -320,23 +307,23 @@ class Solver():
             self.statistics.nodes += 1
             if self.statistics.nodes > maxnodes:
                 break
-            visited.add(current_state.strs)
+            visited.add(current_state.string_state)
 
             for d in current_state.neighbours_rev():
                 new_s = current_state.make_move(d)
-                if (new_s.strs not in visited) and\
-                        (new_s.strs not in queue_strs):
+                if (new_s.string_state not in visited) and\
+                        (new_s.string_state not in queue_strs):
                     queue.append(new_s)
-                    queue_strs.add(new_s.strs)
+                    queue_strs.add(new_s.string_state)
 
-    def ast(self, maxnodes=200000):
-        queue = {self.initial_state.strs: self.initial_state}
+    def ast(self, maxnodes):
+        queue = {self.initial_state.string_state: self.initial_state}
         hqueue = []
-        heapq.heappush(hqueue, (self.initial_state.dist,
-                                self.initial_state.strs))
+        heapq.heappush(hqueue, (self.initial_state.score,
+                                self.initial_state.string_state))
         visited = {''}
-        while queue:
-            dist, str = heapq.heappop(hqueue)
+        while hqueue:
+            _, str = heapq.heappop(hqueue)
             current_state = queue[str]
             if current_state.depth > self.statistics.max_depth:
                 self.statistics.max_depth = current_state.depth
@@ -346,17 +333,16 @@ class Solver():
             self.statistics.nodes += 1
             if self.statistics.nodes > maxnodes:
                 break
-            visited.add(current_state.strs)
+            visited.add(current_state.string_state)
 
             for d in current_state.neighbours():
                 new_s = current_state.make_move(d)
-                if new_s.strs not in visited:
-                    if new_s.strs not in queue:
-                        heapq.heappush(hqueue, (new_s.dist, new_s.strs))
-                        queue[new_s.strs] = new_s
-                    elif queue[new_s.strs].depth > new_s.depth:
-                        heapq.heappush(hqueue, (new_s.dist, new_s.strs))
-                        queue[new_s.strs] = new_s
+                if new_s.string_state not in visited:
+                    if new_s.string_state not in queue\
+                     or queue[new_s.string_state].depth > new_s.depth:
+                        heapq.heappush(hqueue,
+                                       (new_s.score, new_s.string_state))
+                        queue[new_s.string_state] = new_s
 
     def get_path(self):
         """add the full path of final element to the statistics object"""
@@ -386,7 +372,8 @@ class Solver():
         if self.final_state:
             print("search_depth: ", self.final_state.depth)
         print("max_depth: ", self.statistics.max_depth)
-        print("running_time: ", round(time.time() - self.statistics.start_time, 3), "s")
+        print("running_time: ",
+              round(time.time() - self.statistics.start_time, 3), "s")
         print("max_ram_usage: {} MB"
               .format(resource.getrusage(RUSAGE_SELF)[2]/1000))
 
