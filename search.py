@@ -54,7 +54,7 @@ class PuzzleState():
                  zero=None, ast=False, goal_array=None,
                  coords2d=None, dist=None):
         self.state = tiles_config
-        self.strs = "".join(map(str, self.state))
+        self.strs = ",".join(map(str, self.state))
         self.parent = parent
         self.direction = direction
         self.ast = ast
@@ -262,7 +262,7 @@ class Solver():
             self.goal_array = list(range(len(array)))
         self.initial_state = PuzzleState(list(array), ast=(method == "ast"),
                                          goal_array=self.goal_array)
-        self.goal = "".join(map(str, self.goal_array))
+        self.goal = ",".join(map(str, self.goal_array))
         self.statistics = Stats()
         self.final_state = None
         if not self.check_solvability():

@@ -17,14 +17,21 @@ if __name__ == '__main__':
     parser.add_argument("-n", "--nodes", default='200000',
                         help="maximum number of nodes to visit,\
                              default 200 000")
+    parser.add_argument("-g", "--goal", default=None,
+                        help="WRITE ME")
     args = parser.parse_args()
 
     init_state = list(map(int, args.initial.split(",")))
+    if args.goal:
+        goal_array = list(map(int, args.goal.split(",")))
+    else:
+        goal_array = None
     if (list(range(len(init_state))) != sorted(init_state)):
         raise ValueError("Wrong initial state! Check if all numbers are here")
     if (math.sqrt(len(init_state)) != round(math.sqrt(len(init_state)))):
         raise ValueError("Wrong initial state! Check the array size")
-    solver = Solver(args.method, init_state)
+    solver = Solver(args.method, init_state,
+                    goal_array=goal_array)
     final_state = solver.solve(maxnodes=int(args.nodes))
     solver.print_stats(args.final)
     if not final_state:
