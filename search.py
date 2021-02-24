@@ -142,6 +142,39 @@ class PuzzleState():
             an instance of PuzzleState obtained after moving performed
         """
         new_state = list(self.state)
+        global side
+        if direction == "U":
+            new_state[self.zero_index], new_state[self.zero_index-side] =\
+                new_state[self.zero_index-side], new_state[self.zero_index]
+            zero_index_delta = -side
+        elif direction == "D":
+            new_state[self.zero_index], new_state[self.zero_index+side] =\
+                new_state[self.zero_index+side], new_state[self.zero_index]
+            zero_index_delta = side
+        elif direction == "L":
+            new_state[self.zero_index], new_state[self.zero_index-1] =\
+                new_state[self.zero_index-1], new_state[self.zero_index]
+            zero_index_delta = -1
+        elif direction == "R":
+            new_state[self.zero_index], new_state[self.zero_index+1] =\
+                new_state[self.zero_index+1], new_state[self.zero_index]
+            zero_index_delta = 1
+        return PuzzleState(new_state, parent=self, direction=direction,
+                           zero_index=self.zero_index + zero_index_delta)
+
+    def make_move_ast(self, direction):
+        """change a configuration with moving a zero element in the desired direction
+
+        Parameters
+        ----------
+        direction : str, {"U", "D", "L", "R"}
+
+        Returns
+        -------
+        PuzzleState
+            an instance of PuzzleState obtained after moving performed
+        """
+        new_state = list(self.state)
         coords2d = self.coords2d.copy()
         global side, coords_goal
         if direction == "U":
@@ -236,12 +269,12 @@ class Solver():
     """
     # TODO make a function to compare all methods
 
-    def __init__(self, method, array, goal_array=None):
+    def __init__(self, method, array, zl):
         global side, coords_goal
         side = int(math.sqrt(len(array)))
         self._method = method
-        if goal_array:
-            self.goal_array = goal_array
+        if zl:
+            self.goal_array = list(range(1, len(array))) + [0]
         else:
             self.goal_array = list(range(len(array)))
         coords_goal = coords_2d(self.goal_array)
@@ -275,8 +308,6 @@ class Solver():
             current_state = queue.pop(0)
             # print(current_state)
             queue_strs.remove(current_state.string_state)
-            if current_state.depth > self.statistics.max_depth:
-                self.statistics.max_depth = current_state.depth
 
             if self.is_goal(current_state):
                 return current_state
@@ -291,6 +322,8 @@ class Solver():
                         (new_s.string_state not in queue_strs):
                     queue.append(new_s)
                     queue_strs.add(new_s.string_state)
+                    if new_s.depth > self.statistics.max_depth:
+                        self.statistics.max_depth = new_s.depth
 
     def dfs(self, maxnodes):
         queue = [self.initial_state]
@@ -336,7 +369,7 @@ class Solver():
             visited.add(current_state.string_state)
 
             for d in current_state.neighbours():
-                new_s = current_state.make_move(d)
+                new_s = current_state.make_move_ast(d)
                 if new_s.string_state not in visited:
                     if new_s.string_state not in queue\
                      or queue[new_s.string_state].depth > new_s.depth:
