@@ -21,8 +21,8 @@ class PuzzleState():
     direction : str, optional
         direction of the move which led from the parent to current state,
         by default ''
-    zero : int, optional
-        index of the empty tile, by default None
+    zero_index : int, optional
+        index of the empty tile, default None
     ast : bool, optional
         True if A* method is used
         (additional attributes should be initialized), by default False
@@ -47,7 +47,7 @@ class PuzzleState():
 
     """
     def __init__(self, tiles_config, parent=None, direction='',
-                 zero_index=None, ast=False, goal_array=None,
+                 zero_index=None, ast=False,
                  coords2d=None, score=None):
         self.state = tiles_config
         self.string_state = ",".join(map(str, self.state))
@@ -245,6 +245,9 @@ class Solver():
         a method to solve a game
     array : list[int]
         initial position of tiles
+    zl : bool
+        True if zero is a last element of the goal array,
+        default False
 
     Attributes
     ----------
@@ -269,7 +272,7 @@ class Solver():
     """
     # TODO make a function to compare all methods
 
-    def __init__(self, method, array, zl):
+    def __init__(self, method, array, zl=False):
         global side, coords_goal
         side = int(math.sqrt(len(array)))
         self._method = method
@@ -278,8 +281,7 @@ class Solver():
         else:
             self.goal_array = list(range(len(array)))
         coords_goal = coords_2d(self.goal_array)
-        self.initial_state = PuzzleState(list(array), ast=(method == "ast"),
-                                         goal_array=self.goal_array)
+        self.initial_state = PuzzleState(list(array), ast=(method == "ast"))
         self.goal = ",".join(map(str, self.goal_array))
         self.statistics = Stats()
         self.final_state = None
@@ -298,6 +300,9 @@ class Solver():
             self.final_state = self.ast(maxnodes=maxnodes)
         if self.final_state:
             self.get_path()
+        self.statistics.end_time = time.time()
+        self.statistics.total_time = self.statistics.end_time -\
+            self.statistics.start_time
         return self.final_state
 
     def bfs(self, maxnodes):
@@ -306,7 +311,6 @@ class Solver():
         visited = {''}
         while queue:
             current_state = queue.pop(0)
-            # print(current_state)
             queue_strs.remove(current_state.string_state)
 
             if self.is_goal(current_state):
@@ -411,8 +415,6 @@ class Solver():
               .format(resource.getrusage(RUSAGE_SELF)[2]/1000))
 
     def check_solvability(self):
-        # return True
-        # print(parity(self.initial_state.state))
         global side
         return parity(self.initial_state.state) ==\
                parity(self.goal_array) * (-1)**(side + 1)
@@ -425,6 +427,8 @@ class Stats():
     path: List[PuzzleState] = field(default_factory=list)
     moves: List[str] = field(default_factory=list)
     start_time: float = field(default_factory=time.time)
+    end_time: float = 0.0
+    total_time: float = 0.0
 
 
 def coords_2d(arr):
